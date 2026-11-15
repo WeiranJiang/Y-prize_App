@@ -191,23 +191,50 @@ export function contextSummary(ctx: AssistantContext) {
   };
 }
 
-export async function ask(question: string, history: { role: 'user' | 'assistant'; text: string }[], ctx: AssistantContext): Promise<Reply> {
-  const url = process.env.EXPO_PUBLIC_CHAT_URL;
-  if (url) {
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ question, history: history.slice(-10), context: contextSummary(ctx) }),
-      });
-      if (res.ok) {
-        const data = (await res.json()) as { reply?: string };
-        if (data.reply) return { text: data.reply };
-      }
-    } catch {
-      // Fall back to the on-device assistant.
-    }
+/** Only HTTPS endpoints are allowed, except plain HTTP to this device or a private LAN during development. */
+export function chatUrlAllowed(raw: string, dev: boolean): boolean {
+  let u: URL;
+  try {
+    u = new URL(raw);
+  } catch {
+    return false;
   }
-  return answerLocally(question, ctx);
+  if (u.protocol === 'https:') return true;
+  if (u.protocol !== 'http:' || !dev) return false;
+  const h = u.hostname;
+  return h === 'localhost' || h === '127.0.0.1' || /^10\./.test(h) || /^192\.168\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h);
 }
 
+export async function ask(question: string, history: { role: 'user' | 'assistant'; text: string }[], ctx: AssistantContext): Promise<Reply> {
+  const q = question.slice(0, 1000);
+  const url = process.env.EXPO_PUBLIC_CHAT_URL;
+  const dev = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
+  if (url && chatUrlAllowed(url, dev)) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 20_000);
+    try {
+      // EXPO_PUBLIC_* values ship inside the app, so this token is an abuse speed-bump, not a secret.
+      const token = process.env.EXPO_PUBLIC_CHAT_TOKEN;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({
+          question: q,
+          history: history.slice(-10).map((h) => ({ role: h.role, text: h.text.slice(0, 2000) })),
+          context: contextSummary(ctx),
+        }),
+        signal: ctrl.signal,
+      });
+      if (res.ok) {
+        const data = (await res.json()) as unknown;
+        const text = data && typeof data === 'object' ? (data as { reply?: unknown }).reply : undefined;
+        if (typeof text === 'string' && text.trim()) return { text: text.slice(0, 4000) };
+      }
+    } catch {
+      // Network error or timeout: fall back to the on-device assistant.
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return answerLocally(q, ctx);
+}

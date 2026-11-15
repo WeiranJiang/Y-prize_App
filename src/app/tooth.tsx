@@ -11,7 +11,7 @@ import { DemoBadge, Divider, IconButton, Meta, Screen, Section, StatusDot, Statu
 import { crownFor, SurfaceId } from '../domain/arch';
 import { confidenceOf, siteSeries, SiteResult, surfaceLabel } from '../domain/analysis';
 import { BIOMARKERS, formatValue, Status, STATUS_RANK, unitSuffix } from '../domain/biomarkers';
-import { retainerTeeth, toothByUniversal, toothNumber } from '../domain/teeth';
+import { parseTooth, retainerTeeth, toothByUniversal, toothNumber } from '../domain/teeth';
 import { useStore } from '../state/store';
 import { STATUS_HEX } from '../three/regions';
 import { colors, font, radius, space } from '../theme/tokens';
@@ -104,7 +104,7 @@ function ToothSchematic({ universal, groups, selected, onSelect }: { universal: 
 export default function Tooth() {
   const { u } = useLocalSearchParams<{ u?: string }>();
   const { analysis, state, arch, setArch, latestScan } = useStore();
-  const [tooth, setTooth] = useState(Number(u ?? 3));
+  const [tooth, setTooth] = useState(parseTooth(u) ?? 3);
   const [surface, setSurface] = useState<SurfaceId | null>(null);
   const numbering = state.settings.numbering;
 

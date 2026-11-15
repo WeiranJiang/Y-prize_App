@@ -102,6 +102,7 @@ export default function Chat() {
         <TextInput
           value={text}
           onChangeText={setText}
+          maxLength={500}
           placeholder="Ask about your teeth…"
           placeholderTextColor={colors.textMuted}
           style={styles.input}

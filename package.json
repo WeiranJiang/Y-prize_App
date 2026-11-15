@@ -36,5 +36,10 @@
     "typecheck": "tsc --noEmit",
     "export:web": "expo export --platform web"
   },
-  "private": true
+  "private": true,
+  "overrides": {
+    "@expo/fingerprint": {
+      "minimatch": "^11.0.8"
+    }
+  }
 }

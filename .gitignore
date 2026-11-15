@@ -9,3 +9,10 @@ android/
 expo-env.d.ts
 .claude/
 server/node_modules/
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key

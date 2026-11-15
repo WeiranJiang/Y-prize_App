@@ -7,7 +7,7 @@ import Icon from '../../components/Icon';
 import Loupe from '../../components/Loupe';
 import { Divider, IconButton, Legend, Meta, Screen, Section, StatusDot, T } from '../../components/ui';
 import { STATUS_RANK } from '../../domain/biomarkers';
-import { RETAINER_TEETH, searchTeeth, toothByUniversal } from '../../domain/teeth';
+import { parseTooth, RETAINER_TEETH, searchTeeth, toothByUniversal } from '../../domain/teeth';
 import { useStore } from '../../state/store';
 import RetainerView, { Selection } from '../../three/RetainerView';
 import { regionsForScan, STATUS_HEX } from '../../three/regions';
@@ -35,8 +35,8 @@ export default function Home() {
   const H = Dimensions.get('window').height;
 
   useEffect(() => {
-    if (!params.tooth) return;
-    const u = Number(params.tooth);
+    const u = parseTooth(params.tooth);
+    if (u == null) return;
     const a = toothByUniversal(u).arch;
     if (a !== arch) setArch(a);
     setLoupe(u);
@@ -94,6 +94,7 @@ export default function Home() {
                 autoFocus
                 value={query}
                 onChangeText={setQuery}
+                maxLength={60}
                 placeholder="Tooth number or name"
                 placeholderTextColor={colors.textMuted}
                 style={styles.searchInput}

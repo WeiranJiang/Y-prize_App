@@ -112,3 +112,10 @@ export function searchTeeth(query: string, system: NumberingSystem): Tooth[] {
     .filter(Boolean);
   return TEETH.filter((t) => words.every((w) => t.name.toLowerCase().includes(w)));
 }
+
+/** Parse an untrusted route parameter into a valid Universal tooth number (1–32), or null. */
+export function parseTooth(raw: unknown): number | null {
+  if (typeof raw !== 'string' || !/^\d{1,2}$/.test(raw)) return null;
+  const n = Number(raw);
+  return n >= 1 && n <= 32 ? n : null;
+}

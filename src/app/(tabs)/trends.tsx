@@ -13,7 +13,7 @@ import RangeSlider from '../../components/RangeSlider';
 import { DemoBadge, Meta, Screen, Section, StatusDot, StatusTag, T } from '../../components/ui';
 import { analyzeScan, siteSeries, siteTitle } from '../../domain/analysis';
 import { BIOMARKER_ORDER, BIOMARKERS, BiomarkerId, classify, formatDelta, formatValue, Status, STATUS_RANK, unitSuffix } from '../../domain/biomarkers';
-import { toothByUniversal, toothNumber } from '../../domain/teeth';
+import { parseTooth, toothByUniversal, toothNumber } from '../../domain/teeth';
 import { useStore } from '../../state/store';
 import { STATUS_HEX } from '../../three/regions';
 import { colors, radius, space } from '../../theme/tokens';
@@ -35,7 +35,7 @@ export default function Findings() {
   const { state, arch, setArch, stripById } = useStore();
   const numbering = state.settings.numbering;
   const [bios, setBios] = useState<BiomarkerId[]>(['pH', 'lactate', 'calcium']);
-  const [tooth, setTooth] = useState<number | null>(params.tooth ? Number(params.tooth) : null);
+  const [tooth, setTooth] = useState<number | null>(parseTooth(params.tooth));
 
   const scans = useMemo(
     () => state.scans.filter((s) => stripById(s.stripId)?.arch === arch).sort((a, b) => +new Date(a.at) - +new Date(b.at)),
@@ -47,14 +47,14 @@ export default function Findings() {
   useEffect(() => setRange([defaultStart, last]), [arch, last, defaultStart]);
 
   useEffect(() => {
-    if (!params.tooth) return;
-    const u = Number(params.tooth);
+    const u = parseTooth(params.tooth);
+    if (u == null) return;
     if (toothByUniversal(u).arch !== arch) setArch(toothByUniversal(u).arch);
     setTooth(u);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.tooth]);
   useEffect(() => {
-    if (params.bio && params.bio in BIOMARKERS) setBios([params.bio as BiomarkerId]);
+    if (typeof params.bio === 'string' && Object.prototype.hasOwnProperty.call(BIOMARKERS, params.bio)) setBios([params.bio as BiomarkerId]);
   }, [params.bio]);
 
   const i0 = Math.max(0, Math.min(range[0], last));

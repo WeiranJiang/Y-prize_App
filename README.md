@@ -28,11 +28,12 @@ Other routes: `/scan` (tap the case chip on Home), `/profile` (icon on Home), `/
 The Ask tab answers on-device from the app's own rules and data. To use Claude instead, run the small server in `server/` and point the app at it. The API key stays on the server, never in the app:
 
 ```bash
-cd server && npm install && ANTHROPIC_API_KEY=... npm start
-EXPO_PUBLIC_CHAT_URL=http://<host>:8787/chat npx expo start
+cd server && npm install
+ANTHROPIC_API_KEY=... CHAT_TOKEN=pick-a-token npm start        # listens on 127.0.0.1:8787
+EXPO_PUBLIC_CHAT_URL=http://127.0.0.1:8787/chat EXPO_PUBLIC_CHAT_TOKEN=pick-a-token npx expo start
 ```
 
-The app sends the question, recent turns and a compact, de-identified summary of the readings. The server calls `claude-opus-5-5` at low effort, with server-side refusal fallback enabled. If the server can't be reached, the app falls back to the on-device assistant.
+To test from a phone on your Wi-Fi, start the server with `HOST=0.0.0.0` and use your computer's LAN IP. Plain HTTP is accepted only in development builds and only to private addresses; production needs HTTPS. The app sends the question, recent turns and a compact, de-identified summary of the readings. The server calls `claude-opus-5-5` at low effort, with server-side refusal fallback enabled. If the server can't be reached, the app falls back to the on-device assistant. See [SECURITY.md](SECURITY.md) for the full security model.
 
 ## Design system (`src/theme/tokens.ts`, `src/components/ui.tsx`)
 
