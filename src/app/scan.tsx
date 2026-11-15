@@ -8,7 +8,7 @@ import Icon from '../components/Icon';
 import { replaceEta } from '../components/StripHealthCard';
 import ArchToggle from '../components/ArchToggle';
 import BiomarkerLegend from '../components/BiomarkerLegend';
-import { Button, Card, DemoBadge, Divider, Screen, StatusDot, T } from '../components/ui';
+import { Button, Card, DemoBadge, Divider, IconButton, KV, Screen, StatusDot, T } from '../components/ui';
 import { pct } from '../domain/fouling';
 import { useStore } from '../state/store';
 import RetainerView from '../three/RetainerView';
@@ -127,7 +127,8 @@ export default function Scan() {
   return (
     <Screen>
       <View style={styles.header}>
-        <T v="label">{['Prepare', 'Wear', 'Place', 'Read', 'Results'][['prepare', 'wear', 'place', 'scanning', 'results'].indexOf(step)]} · Step {['prepare', 'wear', 'place', 'scanning', 'results'].indexOf(step) + 1} of 5</T>
+        <IconButton name="close" label="Close scan" onPress={() => (router.canGoBack() ? router.back() : router.navigate('/'))} />
+        <T v="label">{['Prepare', 'Wear', 'Place', 'Read', 'Results'][['prepare', 'wear', 'place', 'scanning', 'results'].indexOf(step)]} · {['prepare', 'wear', 'place', 'scanning', 'results'].indexOf(step) + 1} of 5</T>
         <DemoBadge />
       </View>
       <View style={styles.progress}>
@@ -258,7 +259,7 @@ export default function Scan() {
 
       {step === 'scanning' && (
         <View style={styles.body}>
-          <View style={{ height: 300, marginHorizontal: -space.xl }}>
+          <View style={{ height: 300, marginHorizontal: -space.lg }}>
             <RetainerView key={store.arch} arch={store.arch} style={{ flex: 1 }} regions={regions} scan={scanAnim} interactive={false} autoRotate={false} active={focused} zoom={0.92} />
           </View>
           <T v="title" style={{ textAlign: 'center' }}>{stage >= 0 && stage < STAGES.length ? STAGES[stage].label : stage >= STAGES.length ? 'Scan complete' : 'Starting'}</T>
@@ -287,7 +288,7 @@ export default function Scan() {
 
       {step === 'results' && a && (
         <View style={styles.body}>
-          <View style={{ height: 300, marginHorizontal: -space.xl }}>
+          <View style={{ height: 300, marginHorizontal: -space.lg }}>
             <RetainerView key={store.arch} arch={store.arch} style={{ flex: 1 }} regions={regions} reveal active={focused} />
           </View>
           <View style={{ alignItems: 'center', marginBottom: space.sm }}>
@@ -295,16 +296,18 @@ export default function Scan() {
           </View>
           <BiomarkerLegend mode="overview" only={[...new Set((a.results ?? []).filter((r) => r.status !== 'normal' && r.status !== 'unavailable').map((r) => r.site.biomarker))]} />
           <T v="display" style={{ marginTop: space.xl }}>Your scan is ready</T>
-          <View style={{ marginTop: space.lg }}>
-            <ResultLine icon={a.reviewSites.length ? 'alert' : 'check'} text={`${a.reviewSites.length} ${a.reviewSites.length === 1 ? 'area' : 'areas'} to review`} />
-            <ResultLine icon="layers" text={`${a.usable} of ${a.total} configured sites analysed`} />
-            {a.withheld.length ? <ResultLine icon="info" text={`${a.withheld.length} site${a.withheld.length > 1 ? 's' : ''} withheld: signal below quality floor`} /> : null}
-            {a.recalibrate.length ? <ResultLine icon="refresh" text={`${a.recalibrate.length} sensor${a.recalibrate.length > 1 ? 's' : ''} require${a.recalibrate.length > 1 ? '' : 's'} recalibration`} /> : null}
-            {a.readoutLate ? <ResultLine icon="clock" text="Read after the readout window: lower confidence" /> : null}
-            <ResultLine icon="strip" text={`${store.arch === 'upper' ? 'Upper' : 'Lower'} strip clarity ${health.clarity != null ? pct(health.clarity) : '—'} · replace in ${replaceEta(health).toLowerCase()}`} />
-            <ResultLine icon="layers" text="Both retainers were read; switch above to see the other arch" />
-          </View>
-          <Button label="Explore results" style={{ marginTop: space.xl }} onPress={() => { restart(); router.navigate('/'); }} />
+          <T v="small" style={{ marginTop: 4 }}>Both retainers were read · {store.arch === 'upper' ? 'upper' : 'lower'} shown</T>
+          <Card style={{ marginTop: space.lg, paddingVertical: 4 }}>
+            <KV k="Areas to review" v={`${a.reviewSites.length}`} />
+            <Divider />
+            <KV k="Sites analysed" v={`${a.usable} of ${a.total}`} />
+            {a.withheld.length ? (<><Divider /><KV k="Withheld (low signal)" v={`${a.withheld.length}`} /></>) : null}
+            {a.recalibrate.length ? (<><Divider /><KV k="Recalibration needed" v={`${a.recalibrate.length}`} /></>) : null}
+            {a.readoutLate ? (<><Divider /><KV k="Readout timing" v="Late · lower confidence" /></>) : null}
+            <Divider />
+            <KV k="Strip clarity" v={`${health.clarity != null ? pct(health.clarity) : '—'} · replace in ${replaceEta(health).toLowerCase()}`} />
+          </Card>
+          <Button label="View results" style={{ marginTop: space.xl }} onPress={() => { restart(); router.canGoBack() ? router.back() : router.navigate('/'); }} />
           <Button label="View scan details" kind="secondary" style={{ marginTop: space.md }} onPress={() => latest && router.push({ pathname: '/scan-details', params: { id: latest.id } })} />
           {a.withheld.length || a.readoutLate ? (
             <Button
@@ -315,8 +318,8 @@ export default function Scan() {
               onPress={() => (health.state === 'now' || health.state === 'soon' ? router.push('/strip') : restart())}
             />
           ) : null}
-          <Pressable onPress={restart} style={{ alignSelf: 'center', marginTop: space.md }}>
-            <T v="small">Done</T>
+          <Pressable onPress={restart} style={{ alignSelf: 'center', marginTop: space.md, padding: space.sm }}>
+            <T v="small">Scan again</T>
           </Pressable>
         </View>
       )}
@@ -367,10 +370,10 @@ function TimerRing({ progress, size, children }: { progress: number; size: numbe
 }
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: space.xl, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  progress: { flexDirection: 'row', gap: 4, paddingHorizontal: space.xl, marginTop: space.md },
+  header: { paddingHorizontal: space.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  progress: { flexDirection: 'row', gap: 4, paddingHorizontal: space.lg, marginTop: space.md },
   progSeg: { flex: 1, height: 2, borderRadius: 1, backgroundColor: colors.hairlineStrong },
-  body: { paddingHorizontal: space.xl },
+  body: { paddingHorizontal: space.lg },
   check: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline },
   box: { width: 22, height: 22, borderRadius: 7, borderWidth: 1, borderColor: colors.hairlineStrong, alignItems: 'center', justifyContent: 'center' },
   stepper: { width: 32, height: 32, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairlineStrong, alignItems: 'center', justifyContent: 'center' },

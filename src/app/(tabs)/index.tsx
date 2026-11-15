@@ -1,20 +1,19 @@
 import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Dimensions, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Dimensions, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import ArchDiagram from '../../components/ArchDiagram';
 import ArchToggle from '../../components/ArchToggle';
-import BiomarkerLegend from '../../components/BiomarkerLegend';
-import CaseIndicator from '../../components/CaseIndicator';
+import BiomarkerCard from '../../components/BiomarkerCard';
 import Icon from '../../components/Icon';
 import Loupe from '../../components/Loupe';
-import { Card, IconButton, Screen, Section, Segmented, StatusDot, T } from '../../components/ui';
-import { BIOMARKER_ORDER, BIOMARKERS, STATUS_RANK } from '../../domain/biomarkers';
+import { Button, Divider, IconButton, Legend, Meta, Screen, Section, StatusDot, T } from '../../components/ui';
+import { BIOMARKER_ORDER, STATUS_RANK } from '../../domain/biomarkers';
 import { pct } from '../../domain/fouling';
-import type { Insight } from '../../domain/insights';
+import { biomarkerStat, buildOverview } from '../../domain/overview';
 import { RETAINER_TEETH, searchTeeth, toothByUniversal } from '../../domain/teeth';
 import { useStore } from '../../state/store';
 import RetainerView, { Selection } from '../../three/RetainerView';
-import { regionsForScan, ViewMode } from '../../three/regions';
+import { regionsForScan, STATUS_HEX } from '../../three/regions';
 import { colors, font, radius, space } from '../../theme/tokens';
 
 export function scanTimeLabel(iso: string) {
@@ -22,48 +21,22 @@ export function scanTimeLabel(iso: string) {
   const today = new Date();
   const y = new Date(Date.now() - 86400000);
   const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-  if (d.toDateString() === today.toDateString()) return `today at ${time}`;
-  if (d.toDateString() === y.toDateString()) return `yesterday at ${time}`;
-  return `${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} at ${time}`;
-}
-
-export function InsightCard({ i, width }: { i: Insight; width?: number }) {
-  const s = i.status === 'info' ? null : i.status;
-  const bm = i.biomarker ? BIOMARKERS[i.biomarker as keyof typeof BIOMARKERS] : null;
-  return (
-    <Card style={{ width, minHeight: 150 }} onPress={i.action ? () => router.push(i.action!.href as never) : undefined}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        {bm && i.kind === 'finding' ? (
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: bm.color }} />
-        ) : s ? (
-          <StatusDot status={s} />
-        ) : (
-          <Icon name="info" size={14} color={colors.textSecondary} />
-        )}
-        <T v="label" style={{ fontSize: 10 }}>
-          {i.kind === 'finding' ? bm?.shortName ?? 'Finding' : i.kind === 'stable' ? 'Stable' : i.kind === 'strip' ? 'Strip' : i.kind === 'quality' ? 'Scan quality' : 'Routine'}
-        </T>
-      </View>
-      <T v="bodyStrong" style={{ marginTop: space.md }}>{i.title}</T>
-      <T v="small" style={{ marginTop: 6 }} numberOfLines={4}>{i.summary}</T>
-    </Card>
-  );
+  if (d.toDateString() === today.toDateString()) return `Today, ${time}`;
+  if (d.toDateString() === y.toDateString()) return `Yesterday, ${time}`;
+  return `${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}, ${time}`;
 }
 
 export default function Home() {
   const params = useLocalSearchParams<{ tooth?: string }>();
-  const { latestScan, stripById, analysis, insights, recommendations, state, arch, setArch } = useStore();
+  const { latestScan, latestScanFor, stripById, analysis, insights, recommendations, state, arch, setArch } = useStore();
   const focused = useIsFocused();
   const strip = latestScan ? stripById(latestScan.stripId) : undefined;
-  const [mode, setMode] = useState<ViewMode>('overview');
   const [loupe, setLoupe] = useState<number | null>(null);
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState('');
   const numbering = state.settings.numbering;
   const H = Dimensions.get('window').height;
-  const W = Dimensions.get('window').width;
 
-  // Deep links (e.g. from an insight) open the magnifier on that tooth.
   useEffect(() => {
     if (!params.tooth) return;
     const u = Number(params.tooth);
@@ -73,23 +46,22 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.tooth]);
 
+  const o = useMemo(() => buildOverview(state.scans, state.strips, 30), [state.scans, state.strips, state.rev]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const regions = useMemo(() => regionsForScan(latestScan, strip, mode), [latestScan, strip, mode, state.rev]);
+  const stats = useMemo(() => BIOMARKER_ORDER.map((id) => biomarkerStat(id, state.scans, state.strips, 30)), [state.scans, state.strips, state.rev]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const regions = useMemo(() => regionsForScan(latestScan, strip, 'overview'), [latestScan, strip, state.rev]);
 
-  // Arch map: each tooth takes the biomarker colour of its most concerning reading; in-range teeth stay plain.
   const marks = useMemo(() => {
     const best = new Map<number, { rank: number; color: string; dashed?: boolean }>();
     analysis?.results.forEach((r) => {
-      if (mode !== 'overview' && r.site.biomarker !== mode) return;
       if (r.status === 'normal') return;
       const rank = STATUS_RANK[r.status];
       const prev = best.get(r.site.toothUniversal);
-      if (!prev || rank > prev.rank)
-        best.set(r.site.toothUniversal, { rank, color: r.status === 'unavailable' ? colors.unavailable : BIOMARKERS[r.site.biomarker].color, dashed: r.status === 'unavailable' });
+      if (!prev || rank > prev.rank) best.set(r.site.toothUniversal, { rank, color: STATUS_HEX[r.status], dashed: r.status === 'unavailable' });
     });
     return best;
-  }, [analysis, mode]);
-  const concernBiomarkers = [...new Set((analysis?.results ?? []).filter((r) => STATUS_RANK[r.status] >= 1).map((r) => r.site.biomarker))];
+  }, [analysis]);
 
   const openTooth = (u: number) => {
     const a = toothByUniversal(u).arch;
@@ -100,118 +72,161 @@ export default function Home() {
     if (s?.tooth) openTooth(s.tooth);
   };
 
-  const quality = analysis ? analysis.usable / analysis.total : 0;
-  const top = insights.filter((i) => i.kind !== 'routine').slice(0, 5);
+  // Whole-mouth figures from the latest scan of each arch.
+  const latestBoth = (['upper', 'lower'] as const).map((a) => latestScanFor(a)).filter(Boolean);
+  const readings = latestBoth.flatMap((s) => s!.readings);
+  const usable = readings.filter((r) => r.value != null).length;
+  const attention = stats.reduce((n, s) => n + s.attention, 0);
+  const borderline = stats.reduce((n, s) => n + s.borderline, 0);
+  const lastAt = latestBoth.map((s) => s!.at).sort().pop();
+  const findings = insights.filter((i) => i.kind !== 'routine' && i.kind !== 'stable').slice(0, 4);
   const results = query ? searchTeeth(query, numbering).filter((t) => RETAINER_TEETH.includes(t)).slice(0, 6) : [];
-  const modeOptions = [
-    { key: 'overview' as ViewMode, label: 'All' },
-    ...BIOMARKER_ORDER.filter((id) => strip?.supported.includes(id)).map((id) => ({ key: id as ViewMode, label: BIOMARKERS[id].shortName })),
-  ];
+  const today = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <Screen>
+        {/* Header */}
         <View style={styles.header}>
-          <ArchToggle onChange={() => setLoupe(null)} />
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <IconButton name="search" onPress={() => setSearching((v) => !v)} />
-            <IconButton name="profile" onPress={() => router.push('/profile')} />
+          <View style={{ flex: 1 }}>
+            <T v="label">{today}</T>
+            <T v="display" style={{ marginTop: 4 }}>Oral health</T>
+          </View>
+          <View style={{ flexDirection: 'row', gap: space.sm }}>
+            <IconButton name="search" label="Search teeth" onPress={() => setSearching((v) => !v)} />
+            <IconButton name="profile" label="Profile" onPress={() => router.push('/profile')} />
           </View>
         </View>
 
         {searching ? (
-          <View style={{ paddingHorizontal: space.xl, marginTop: space.md }}>
+          <View style={{ paddingHorizontal: space.lg, marginTop: space.md }}>
             <View style={styles.search}>
               <Icon name="search" size={16} color={colors.textMuted} />
               <TextInput
                 autoFocus
                 value={query}
                 onChangeText={setQuery}
-                placeholder="Tooth number or name, e.g. 3 or “lower left molar”"
+                placeholder="Tooth number or name"
                 placeholderTextColor={colors.textMuted}
                 style={styles.searchInput}
               />
             </View>
             {results.map((r) => (
-              <Pressable
-                key={r.universal}
-                onPress={() => { openTooth(r.universal); setSearching(false); setQuery(''); }}
-                style={{ paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between' }}
-              >
-                <T v="bodyStrong" style={{ fontSize: 14 }}>{r.name}</T>
+              <Pressable key={r.universal} onPress={() => { openTooth(r.universal); setSearching(false); setQuery(''); }} style={styles.result}>
+                <T v="bodyStrong" style={{ fontSize: 15 }}>{r.name}</T>
                 <T v="small">#{r.universal} · FDI {r.fdi}</T>
               </Pressable>
             ))}
           </View>
         ) : null}
 
-        <View style={{ marginTop: space.lg }}>
-          <Segmented options={modeOptions} value={mode} onChange={setMode} />
-        </View>
+        {/* Overview */}
+        <View style={{ paddingHorizontal: space.lg, marginTop: space.xl }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+            <View>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                <T v="number" style={{ fontSize: 56, letterSpacing: -1.5, fontWeight: '400' }}>{o.overall != null ? Math.round(o.overall * 100) : '—'}</T>
+                <T v="number" style={{ fontSize: 24, color: colors.textSecondary, fontWeight: '400', marginLeft: 2 }}>%</T>
+              </View>
+              <T v="small" style={{ marginTop: -2 }}>of readings in range</T>
+            </View>
+            <View style={{ alignItems: 'flex-end', gap: 6 }}>
+              {attention ? (
+                <View style={styles.statusRow}><StatusDot status="high" size={6} /><T v="small" style={{ color: colors.text }}>{attention} need attention</T></View>
+              ) : null}
+              {borderline ? (
+                <View style={styles.statusRow}><StatusDot status="mild" size={6} /><T v="small" style={{ color: colors.text }}>{borderline} borderline</T></View>
+              ) : null}
+              {!attention && !borderline ? (
+                <View style={styles.statusRow}><StatusDot status="normal" size={6} /><T v="small" style={{ color: colors.text }}>All in range</T></View>
+              ) : null}
+            </View>
+          </View>
 
-        {/* Hero */}
-        <View style={{ height: Math.max(320, H * 0.45) }}>
-          <RetainerView
-            key={arch}
-            arch={arch}
-            style={{ flex: 1 }}
-            regions={regions}
-            reveal
-            selectedTooth={loupe}
-            onSelect={onSelect}
-            active={focused && loupe == null}
-          />
-          <View pointerEvents="none" style={styles.hint}>
-            <Icon name="zoom" size={13} color={colors.textMuted} />
-            <T v="small" style={{ fontSize: 11, color: colors.textMuted }}>Tap a tooth to zoom in</T>
+          <View style={styles.metrics}>
+            <Metric label="Sites read" value={`${usable}`} sub={`of ${readings.length}`} />
+            <View style={styles.vr} />
+            <Metric label="Trend · 30D" value={o.direction === 'improving' ? 'Improving' : o.direction === 'worsening' ? 'Declining' : 'Steady'} />
+            <View style={styles.vr} />
+            <Metric label="Scan quality" value={readings.length ? pct(usable / readings.length) : '—'} />
+          </View>
+          <Meta style={{ marginTop: space.md }}>
+            {lastAt ? `Last scan ${scanTimeLabel(lastAt)}` : 'No scans yet'} · Upper and lower · Demo data
+          </Meta>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.lg }}>
+            <Button label="Start scan" icon="scan" onPress={() => router.push('/scan')} style={{ flex: 1 }} />
+            <Pressable onPress={() => router.push('/scan')} style={styles.caseChip} accessibilityLabel="Scanning case status">
+              <View style={[styles.dot, { backgroundColor: state.caseStatus === 'disconnected' ? colors.textMuted : colors.normal }]} />
+              <T v="small" style={{ color: colors.textSecondary, fontSize: 12 }}>Case {Math.round(state.caseBattery * 100)}%</T>
+            </Pressable>
           </View>
         </View>
 
-        <T v="small" style={{ textAlign: 'center', paddingHorizontal: space.xl, color: colors.textSecondary }}>
-          {latestScan ? `Last scanned ${scanTimeLabel(latestScan.at)} · Scan quality ${pct(quality)}` : 'No scans yet'}
-        </T>
-        <View style={{ marginTop: space.md }}>
-          <BiomarkerLegend mode={mode === 'signal' ? 'overview' : mode} only={mode === 'overview' ? concernBiomarkers : undefined} />
-        </View>
-        <View style={{ alignItems: 'center', marginTop: space.lg }}>
-          <CaseIndicator />
-        </View>
-
-        <Section title="Dental arch" action={<T v="small">{numbering === 'universal' ? 'Universal' : 'FDI'} numbering</T>}>
-          <Card style={{ paddingHorizontal: 6 }}>
-            <ArchDiagram key={arch} arch={arch} marks={marks} selected={loupe} onSelect={openTooth} numbering={numbering} />
-            <T v="small" style={{ textAlign: 'center', fontSize: 11 }}>Tap any tooth to zoom in</T>
-          </Card>
-        </Section>
-
-        <Section style={{ paddingHorizontal: 0 }}>
-          <T v="heading" style={{ paddingHorizontal: space.xl, marginBottom: space.md }}>Your latest insights</T>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: space.xl }} snapToInterval={W * 0.72 + 10} decelerationRate="fast">
-            {top.map((i) => (
-              <InsightCard key={i.id} i={i} width={W * 0.72} />
+        {/* Biomarkers */}
+        <Section title="Biomarkers" action={<Pressable onPress={() => router.navigate('/overview')} hitSlop={8}><T v="small" style={{ color: colors.text }}>Overview</T></Pressable>}>
+          <View style={{ gap: space.sm }}>
+            {[0, 2, 4].map((i) => (
+              <View key={i} style={{ flexDirection: 'row', gap: space.sm }}>
+                <BiomarkerCard s={stats[i]} />
+                <BiomarkerCard s={stats[i + 1]} />
+              </View>
             ))}
-          </ScrollView>
+          </View>
+          <Meta style={{ marginTop: space.sm }}>Median across monitored sites · 30-day trend</Meta>
         </Section>
 
-        <Section title="Recommended for you">
-          <Card style={{ paddingVertical: 4 }}>
+        {/* Tooth map */}
+        <Section title="Tooth map" action={<ArchToggle onChange={() => setLoupe(null)} />}>
+          <View style={styles.mapCard}>
+            <View style={{ height: Math.max(260, H * 0.34) }}>
+              <RetainerView key={arch} arch={arch} style={{ flex: 1 }} regions={regions} reveal selectedTooth={loupe} onSelect={onSelect} active={focused && loupe == null} />
+              <View pointerEvents="none" style={styles.hint}>
+                <Icon name="zoom" size={12} color={colors.textMuted} />
+                <T v="small" style={{ fontSize: 11, color: colors.textMuted }}>Tap a tooth to inspect</T>
+              </View>
+            </View>
+            <Divider />
+            <View style={{ paddingHorizontal: 6, paddingTop: space.sm }}>
+              <ArchDiagram key={arch} arch={arch} marks={marks} selected={loupe} onSelect={openTooth} numbering={numbering} />
+            </View>
+            <View style={{ paddingBottom: space.md }}>
+              <Legend items={[{ status: 'mild', label: 'Borderline' }, { status: 'high', label: 'Needs attention' }]} />
+            </View>
+          </View>
+        </Section>
+
+        {/* Findings */}
+        <Section title="Findings">
+          <View style={styles.list}>
+            {findings.map((i, idx) => (
+              <Pressable key={i.id} onPress={i.action ? () => router.push(i.action!.href as never) : undefined} style={({ pressed }) => [styles.listRow, idx > 0 && styles.listBorder, pressed && { backgroundColor: colors.surfaceRaised }]}>
+                <View style={{ paddingTop: 6 }}>
+                  <StatusDot status={i.status === 'info' ? 'unavailable' : i.status} size={6} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <T v="bodyStrong" style={{ fontSize: 15 }}>{i.title}</T>
+                  <T v="small" style={{ marginTop: 2 }} numberOfLines={2}>{i.summary}</T>
+                </View>
+                <Icon name="chevron" size={14} color={colors.textMuted} />
+              </Pressable>
+            ))}
+          </View>
+        </Section>
+
+        <Section title="Recommended">
+          <View style={styles.list}>
             {recommendations.map((r, idx) => (
-              <View key={r.id} style={{ paddingVertical: 14, borderTopWidth: idx ? 1 : 0, borderTopColor: colors.hairline }}>
-                <View style={{ flexDirection: 'row', gap: 12 }}>
-                  <T v="label" style={{ fontSize: 11, marginTop: 3, color: colors.textMuted }}>{String(idx + 1).padStart(2, '0')}</T>
-                  <View style={{ flex: 1 }}>
-                    <T v="bodyStrong" style={{ fontSize: 14.5 }}>{r.text}</T>
-                    <T v="small" style={{ marginTop: 4 }}>Why: {r.why}</T>
-                  </View>
+              <View key={r.id} style={[styles.listRow, idx > 0 && styles.listBorder]}>
+                <T v="small" style={{ width: 18, color: colors.textMuted, paddingTop: 1 }}>{idx + 1}</T>
+                <View style={{ flex: 1 }}>
+                  <T v="bodyStrong" style={{ fontSize: 15 }}>{r.text}</T>
+                  <T v="small" style={{ marginTop: 2 }}>{r.why}</T>
                 </View>
               </View>
             ))}
-          </Card>
-          <Pressable onPress={() => router.push('/about')} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: space.lg }}>
-            <Icon name="info" size={14} color={colors.textMuted} />
-            <T v="small" style={{ color: colors.textMuted, fontSize: 12, flex: 1 }}>
-              These readings are research indicators and do not diagnose decay or gum disease. How findings are made →
-            </T>
+          </View>
+          <Pressable onPress={() => router.push('/about')} style={{ marginTop: space.lg }}>
+            <Meta>Research indicators — not a diagnosis of decay or gum disease. How findings are made ›</Meta>
           </Pressable>
         </Section>
       </Screen>
@@ -221,9 +236,31 @@ export default function Home() {
   );
 }
 
+function Metric({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <View style={{ flex: 1 }}>
+      <T v="small" style={{ fontSize: 11.5, color: colors.textMuted }}>{label}</T>
+      <T v="bodyStrong" style={{ fontSize: 17, marginTop: 4, fontVariant: ['tabular-nums'] }}>
+        {value}
+        {sub ? <T v="small" style={{ fontSize: 12, color: colors.textMuted }}> {sub}</T> : null}
+      </T>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: space.xl, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  search: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 44, borderRadius: radius.pill, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairlineStrong, paddingHorizontal: 14 },
-  searchInput: { flex: 1, color: colors.text, fontFamily: font.regular, fontSize: 14, outlineStyle: 'none' } as object,
-  hint: { position: 'absolute', bottom: 6, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 5 },
+  header: { paddingHorizontal: space.lg, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  search: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 40, borderRadius: radius.sm, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, paddingHorizontal: 12 },
+  searchInput: { flex: 1, color: colors.text, fontFamily: font.family, fontSize: 15, outlineStyle: 'none' } as object,
+  result: { paddingVertical: 12, flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  metrics: { flexDirection: 'row', marginTop: space.xl, paddingVertical: space.md, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  vr: { width: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginHorizontal: space.md },
+  caseChip: { height: 48, paddingHorizontal: 14, borderRadius: radius.sm, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  dot: { width: 6, height: 6, borderRadius: 3 },
+  mapCard: { backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, overflow: 'hidden' },
+  hint: { position: 'absolute', bottom: 10, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 5 },
+  list: { backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, overflow: 'hidden' },
+  listRow: { flexDirection: 'row', gap: space.md, paddingHorizontal: space.lg, paddingVertical: 14, alignItems: 'flex-start' },
+  listBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
 });

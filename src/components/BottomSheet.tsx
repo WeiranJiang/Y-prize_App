@@ -46,7 +46,7 @@ export default function BottomSheet({ open, onClose, children, maxHeight = 0.58 
   return (
     <Modal transparent visible animationType="none" onRequestClose={onClose} statusBarTranslucent>
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(3,4,16,0.22)', opacity: fade }]}>
+      <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', opacity: fade }]}>
         <Pressable style={{ flex: 1 }} onPress={onClose} />
       </Animated.View>
       <Animated.View style={[styles.sheet, { maxHeight: H * maxHeight, paddingBottom: insets.bottom + 16, transform: [{ translateY: y }] }]}>
@@ -75,5 +75,5 @@ const styles = StyleSheet.create({
     borderColor: colors.hairlineStrong,
   },
   grabArea: { alignItems: 'center', paddingTop: 10, paddingBottom: 14 },
-  grab: { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(155,165,184,0.4)' },
+  grab: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#3A3A3A' },
 });

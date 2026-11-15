@@ -14,7 +14,7 @@ import RetainerView from '../three/RetainerView';
 import { signalRegions } from '../three/regions';
 import { colors, space } from '../theme/tokens';
 
-const tStatus = (t: number, usable: boolean): Status => (!usable ? 'high' : t >= 0.8 ? 'normal' : t >= 0.7 ? 'mild' : 'elevated');
+const tStatus = (t: number, usable: boolean): Status => (!usable ? 'high' : t >= 0.8 ? 'normal' : 'mild');
 
 export default function StripHealth() {
   const { health: h, state, dispatch, strip } = useStore();
@@ -50,7 +50,7 @@ export default function StripHealth() {
           <IconButton name="chevronLeft" onPress={() => (router.canGoBack() ? router.back() : router.navigate('/'))} />
           <DemoBadge />
         </View>
-        <View style={{ paddingHorizontal: space.xl, marginTop: space.lg }}>
+        <View style={{ paddingHorizontal: space.lg, marginTop: space.lg }}>
           <ArchToggle />
           <T v="label" style={{ marginTop: space.lg }}>{strip.arch === 'upper' ? 'Upper' : 'Lower'} sensing strip · {strip.batch}</T>
           <T v="display" style={{ marginTop: 6 }}>{h.headline}</T>
@@ -150,9 +150,8 @@ export default function StripHealth() {
               showUnmeasured={false}
               title="Signal · clear areas stay white"
               items={[
-                { status: 'mild', label: '70–80%' },
-                { status: 'elevated', label: '<70%' },
-                { status: 'high', label: 'Below floor' },
+                { status: 'mild', label: 'Film build-up (<80%)' },
+                { status: 'high', label: 'Below signal floor' },
               ]}
             />
           </Card>
@@ -274,5 +273,5 @@ function HistoryRow({ title, sub, value }: { title: string; sub: string; value: 
 }
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: space.xl, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  header: { paddingHorizontal: space.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 });

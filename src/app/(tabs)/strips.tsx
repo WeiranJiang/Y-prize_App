@@ -48,8 +48,8 @@ export default function Strips() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <Screen>
-        <View style={{ paddingHorizontal: space.xl }}>
-          <T v="display" style={{ fontSize: 30 }}>Strips</T>
+        <View style={{ paddingHorizontal: space.lg }}>
+          <T v="display">Strips</T>
           <T v="small" style={{ marginTop: 2 }}>Your sensing strips and deliveries</T>
         </View>
 

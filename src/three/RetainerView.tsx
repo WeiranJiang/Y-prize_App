@@ -97,7 +97,7 @@ void main() {
   float light = 0.5 + 0.38 * diff + 0.32 * rim;
   float depth = -mv.z;
   float fog = clamp(1.0 - (depth - uNear) / (uFar - uNear), 0.28, 1.0);
-  vec3 neutral = vec3(0.93, 0.95, 0.99);
+  vec3 neutral = vec3(0.91, 0.91, 0.91);
   vec3 col = mix(neutral, aColor, uColorAmt);
   float colored = step(0.0, aRegion) * uColorAmt;
   float a = light * fog;
@@ -121,7 +121,7 @@ void main() {
     float beam = exp(-d * d / 9.0);
     float read = 1.0 - smoothstep(-1.5, 1.5, d);
     a *= mix(0.18, 1.0, read);
-    col = mix(col, vec3(0.62, 0.74, 1.0), beam * 0.85);
+    col = mix(col, vec3(1.0, 1.0, 1.0), beam * 0.85);
     a += beam * 0.8;
     size *= 1.0 + beam * 0.7;
   }
@@ -167,7 +167,7 @@ varying float vA;
 void main() {
   vec2 c = gl_PointCoord - 0.5;
   if (length(c) > 0.5) discard;
-  gl_FragColor = vec4(0.45, 0.55, 0.85, vA);
+  gl_FragColor = vec4(0.55, 0.55, 0.55, vA);
 }
 `;
 

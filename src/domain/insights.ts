@@ -203,7 +203,7 @@ export function buildInsights(
       id: 'R4',
       rule: 'R4 · Strip replacement',
       kind: 'strip',
-      status: health.state === 'now' ? 'high' : 'elevated',
+      status: health.state === 'now' ? 'high' : 'mild',
       title: health.headline,
       summary: health.detail,
       observed: `Reference-spot clarity ${health.clarity != null ? pct(health.clarity) : '—'} of baseline; ${health.sessions} sessions, day ${Math.floor(health.daysInUse) + 1} of ${health.limits.maxDays}.`,

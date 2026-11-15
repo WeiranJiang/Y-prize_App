@@ -1,67 +1,82 @@
 /**
- * SPOT design tokens. Colors are used purposefully: status hues only ever
- * mean a measured state against a configured threshold — never decoration.
+ * SPOT design system — neutral, clinical dark UI.
+ *
+ * ~90% of every screen is black, graphite, white and gray. Green, amber and
+ * red are reserved for medical status and always ship with a text label.
  */
+import { Platform } from 'react-native';
+
 export const colors = {
-  bg: '#05061B',
-  bg2: '#0B1024',
-  surface: '#0E1430',
-  surfaceRaised: '#131A3A',
-  hairline: 'rgba(155,165,184,0.14)',
-  hairlineStrong: 'rgba(155,165,184,0.26)',
+  // Neutral foundation
+  bg: '#0A0A0A',
+  bg2: '#141414',
+  surface: '#1A1A1A', // cards
+  surfaceRaised: '#242424', // elevated / selected
+  border: '#303030',
+  hairline: '#232323',
+  hairlineStrong: '#303030',
 
-  ivory: '#F8F9FC',
-  coolGray: '#E8ECF2',
+  text: '#F5F5F5',
+  textSecondary: '#989898',
+  textMuted: '#696969',
+  textOnLight: '#0A0A0A',
+  ivory: '#F5F5F5', // primary buttons / active states
 
-  text: '#F7F8FC',
-  textSecondary: '#9BA5B8',
-  textMuted: '#6B758B',
-  textOnLight: '#172033',
+  // Functional health colours
+  normal: '#39A76D', // in range
+  mild: '#D6A34A', // borderline
+  elevated: '#E05252', // needs attention
+  high: '#E05252', // needs attention (labelled "High")
+  unavailable: '#696969',
 
-  // Sensor states
-  normal: '#75BBA5',
-  mild: '#F0C76D',
-  elevated: '#F29D68',
-  high: '#EF6873',
-  unavailable: '#69758A',
+  // Two-series charts: neutral white vs gray, always with direct labels.
+  seriesA: '#F5F5F5',
+  seriesB: '#8A8A8A',
 
-  // Identity colors for two-series comparisons (validated on #0B1024, ΔE ≥ 24 under CVD).
-  seriesA: '#4C78E8',
-  seriesB: '#C47A3C',
-
-  point: '#EEF1FA',
-  accent: '#A9B8FF',
+  point: '#E8E8E8',
+  accent: '#F5F5F5',
 } as const;
+
+/** SF Pro on iOS (system font); platform system font elsewhere. */
+const family = Platform.select({ ios: 'System', android: undefined, default: 'System' });
 
 export const font = {
-  light: 'Inter_300Light',
-  regular: 'Inter_400Regular',
-  medium: 'Inter_500Medium',
-  semibold: 'Inter_600SemiBold',
+  family,
+  light: family,
+  regular: family,
+  medium: family,
+  semibold: family,
 } as const;
 
+export const weight = { light: '300', regular: '400', medium: '500', semibold: '600' } as const;
+
+/** 8-point spacing. */
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48 } as const;
-export const radius = { sm: 10, md: 16, lg: 22, pill: 999 } as const;
+export const radius = { sm: 12, md: 14, lg: 18, pill: 999 } as const;
+
+const tab = ['tabular-nums' as const];
 
 export const type = {
-  display: { fontFamily: font.light, fontSize: 34, letterSpacing: -0.8, color: colors.text },
-  title: { fontFamily: font.regular, fontSize: 24, letterSpacing: -0.4, color: colors.text },
-  heading: { fontFamily: font.medium, fontSize: 17, letterSpacing: -0.2, color: colors.text },
-  body: { fontFamily: font.regular, fontSize: 15, lineHeight: 22, color: colors.textSecondary },
-  bodyStrong: { fontFamily: font.medium, fontSize: 15, lineHeight: 22, color: colors.text },
-  small: { fontFamily: font.regular, fontSize: 13, lineHeight: 18, color: colors.textSecondary },
+  display: { fontFamily: family, fontWeight: '600' as const, fontSize: 32, letterSpacing: -0.6, color: colors.text },
+  title: { fontFamily: family, fontWeight: '600' as const, fontSize: 22, letterSpacing: -0.35, color: colors.text },
+  heading: { fontFamily: family, fontWeight: '600' as const, fontSize: 17, letterSpacing: -0.2, color: colors.text },
+  body: { fontFamily: family, fontWeight: '400' as const, fontSize: 15, lineHeight: 21, color: colors.textSecondary },
+  bodyStrong: { fontFamily: family, fontWeight: '500' as const, fontSize: 15, lineHeight: 21, color: colors.text },
+  small: { fontFamily: family, fontWeight: '400' as const, fontSize: 13, lineHeight: 18, color: colors.textSecondary, fontVariant: tab },
   label: {
-    fontFamily: font.medium,
+    fontFamily: family,
+    fontWeight: '600' as const,
     fontSize: 11,
-    letterSpacing: 1.2,
+    letterSpacing: 0.6,
     textTransform: 'uppercase' as const,
-    color: colors.textSecondary,
+    color: colors.textMuted,
   },
   number: {
-    fontFamily: font.light,
-    fontSize: 30,
-    letterSpacing: -0.6,
+    fontFamily: family,
+    fontWeight: '500' as const,
+    fontSize: 28,
+    letterSpacing: -0.5,
     color: colors.text,
-    fontVariant: ['tabular-nums' as const],
+    fontVariant: tab,
   },
 } as const;

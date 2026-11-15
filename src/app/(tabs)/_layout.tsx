@@ -29,8 +29,7 @@ function TabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
             accessibilityState={{ selected: on }}
             accessibilityLabel={tab.label}
           >
-            <View style={[styles.indicator, on && { backgroundColor: colors.text }]} />
-            <Icon name={tab.icon} size={22} color={on ? colors.text : colors.textMuted} strokeWidth={on ? 1.6 : 1.3} />
+            <Icon name={tab.icon} size={23} color={on ? colors.text : colors.textMuted} strokeWidth={on ? 1.7 : 1.4} />
             <Text style={[styles.label, { color: on ? colors.text : colors.textMuted }]}>{tab.label}</Text>
           </Pressable>
         );
@@ -52,7 +51,7 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
-    backgroundColor: Platform.OS === 'web' ? 'rgba(5,6,27,0.94)' : 'rgba(5,6,27,0.97)',
+    backgroundColor: Platform.OS === 'web' ? 'rgba(10,10,10,0.96)' : 'rgba(10,10,10,0.98)',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.hairlineStrong,
     paddingTop: 8,
@@ -61,7 +60,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  item: { flex: 1, alignItems: 'center', gap: 4 },
+  item: { flex: 1, alignItems: 'center', gap: 3, paddingTop: 2 },
   indicator: { width: 16, height: 2, borderRadius: 1, marginBottom: 4, backgroundColor: 'transparent' },
-  label: { fontFamily: font.medium, fontSize: 10, letterSpacing: 0.3 },
+  label: { fontFamily: font.family, fontWeight: '500', fontSize: 10, letterSpacing: 0.1 },
 });

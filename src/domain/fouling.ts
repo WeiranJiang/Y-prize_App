@@ -278,7 +278,7 @@ export function pct(x: number, digits = 0) {
 export const STATE_COLOR_KEY: Record<StripState, 'normal' | 'mild' | 'elevated' | 'high' | 'unavailable'> = {
   baseline: 'unavailable',
   good: 'normal',
-  monitor: 'mild',
-  soon: 'elevated',
+  monitor: 'normal',
+  soon: 'mild',
   now: 'high',
 };

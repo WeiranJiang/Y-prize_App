@@ -29,9 +29,9 @@ export default function Profile() {
 
   return (
     <Screen>
-      <View style={{ paddingHorizontal: space.xl, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <View style={{ paddingHorizontal: space.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <View>
-          <T v="display" style={{ fontSize: 30 }}>Profile</T>
+          <T v="display">Profile</T>
           <T v="small" style={{ marginTop: 2 }}>Alex · Upper and lower retainers</T>
         </View>
         <DemoBadge />

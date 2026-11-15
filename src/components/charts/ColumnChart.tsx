@@ -41,7 +41,7 @@ export default function ColumnChart({ cols, height = 140, max = 1, ticks = [0, 0
             {ticks.map((t) => (
               <G key={t}>
                 <Line x1={L} x2={L + iw} y1={y(t)} y2={y(t)} stroke={colors.hairline} strokeWidth={1} />
-                <SvgText x={L - 8} y={y(t) + 3.5} fontSize={10} fill={colors.textMuted} textAnchor="end" fontFamily={font.regular}>{formatY(t)}</SvgText>
+                <SvgText x={L - 8} y={y(t) + 3.5} fontSize={10} fill={colors.textMuted} textAnchor="end" fontFamily={font.family} fontWeight="400">{formatY(t)}</SvgText>
               </G>
             ))}
             {cols.map((c, i) => (
@@ -50,12 +50,12 @@ export default function ColumnChart({ cols, height = 140, max = 1, ticks = [0, 0
             {threshold ? (
               <G>
                 <Line x1={L} x2={L + iw} y1={y(threshold.y)} y2={y(threshold.y)} stroke={colors.textSecondary} strokeWidth={1} opacity={0.6} />
-                <SvgText x={L + iw} y={y(threshold.y) - 5} fontSize={9.5} fill={colors.textSecondary} textAnchor="end" fontFamily={font.medium}>{threshold.label}</SvgText>
+                <SvgText x={L + iw} y={y(threshold.y) - 5} fontSize={9.5} fill={colors.textSecondary} textAnchor="end" fontFamily={font.family} fontWeight="500">{threshold.label}</SvgText>
               </G>
             ) : null}
             {cols.map((c, i) =>
               c.label ? (
-                <SvgText key={c.key + 'l'} x={L + i * slot + slot / 2} y={height - 5} fontSize={9.5} fill={colors.textMuted} textAnchor="middle" fontFamily={font.regular}>{c.label}</SvgText>
+                <SvgText key={c.key + 'l'} x={L + i * slot + slot / 2} y={height - 5} fontSize={9.5} fill={colors.textMuted} textAnchor="middle" fontFamily={font.family} fontWeight="400">{c.label}</SvgText>
               ) : null,
             )}
           </Svg>

@@ -10,7 +10,7 @@
  */
 import { siteAnchor, Vec3 } from '../domain/arch';
 import { analyzeScan, readingStatus } from '../domain/analysis';
-import { BIOMARKERS, Status } from '../domain/biomarkers';
+import { Status } from '../domain/biomarkers';
 import type { Scan, Strip } from '../domain/types';
 import { colors } from '../theme/tokens';
 import type { PointCloud } from './retainerGeometry';
@@ -41,14 +41,14 @@ export type ViewMode = 'overview' | 'pH' | 'lactate' | 'calcium' | 'phosphate' |
 
 /** Severity → how strongly the biomarker colour replaces the white dots. */
 export const SEVERITY_INTENSITY: Record<Exclude<Status, 'normal' | 'unavailable'>, number> = {
-  mild: 0.5,
-  elevated: 0.78,
+  mild: 0.85,
+  elevated: 0.9,
   high: 1,
 };
 
 /**
- * Only readings of concern are coloured, each in its biomarker's colour
- * (deeper = more concern). Healthy sites stay plain white dots. Withheld
+ * Only readings of concern are coloured: amber for borderline, red for
+ * needs-attention. Healthy sites stay plain white dots. Withheld
  * readings get a faint slate ring so "not measured" is never read as healthy.
  */
 export function regionsForScan(scan: Scan | undefined, strip: Strip | undefined, mode: ViewMode): Region[] {
@@ -68,7 +68,7 @@ export function regionsForScan(scan: Scan | undefined, strip: Strip | undefined,
       anchor: p,
       normal: n,
       radius: r.site.footprintMm,
-      color: status === 'unavailable' ? colors.unavailable : BIOMARKERS[r.site.biomarker].color,
+      color: STATUS_HEX[status],
       intensity: status === 'unavailable' ? 0.55 : SEVERITY_INTENSITY[status],
       outline: true,
       wrap: r.site.surface === 'mesial' || r.site.surface === 'distal',
@@ -80,7 +80,7 @@ export function regionsForScan(scan: Scan | undefined, strip: Strip | undefined,
 /** Strip-health view: local optical transmission per site + reference spots. */
 export function signalRegions(scan: Scan, strip: Strip): Region[] {
   // Clear (≥80% transmission) areas stay white; only film build-up is coloured.
-  const tColor = (t: number, usable: boolean) => (!usable ? colors.high : t >= 0.7 ? colors.mild : colors.elevated);
+  const tColor = (t: number, usable: boolean) => (!usable ? colors.high : colors.mild);
   const out: Region[] = [];
   for (const s of strip.sites) {
     const r = scan.readings.find((x) => x.siteId === s.id)!;

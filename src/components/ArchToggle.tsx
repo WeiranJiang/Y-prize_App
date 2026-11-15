@@ -22,7 +22,7 @@ export default function ArchToggle({ onChange }: { onChange?: (a: Arch) => void 
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
           >
-            <Text style={[styles.text, on && { color: colors.textOnLight }]}>{a === 'upper' ? 'Upper teeth' : 'Lower teeth'}</Text>
+            <Text style={[styles.text, on && { color: colors.text }]}>{a === 'upper' ? 'Upper' : 'Lower'}</Text>
           </Pressable>
         );
       })}
@@ -31,8 +31,8 @@ export default function ArchToggle({ onChange }: { onChange?: (a: Arch) => void 
 }
 
 const styles = StyleSheet.create({
-  wrap: { flexDirection: 'row', padding: 3, borderRadius: 999, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairlineStrong, alignSelf: 'flex-start' },
-  btn: { paddingHorizontal: 14, height: 32, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  on: { backgroundColor: colors.ivory },
-  text: { fontFamily: font.medium, fontSize: 13, color: colors.text },
+  wrap: { flexDirection: 'row', padding: 2, borderRadius: 10, backgroundColor: colors.bg2, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, alignSelf: 'flex-start' },
+  btn: { minWidth: 72, paddingHorizontal: 14, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  on: { backgroundColor: colors.surfaceRaised },
+  text: { fontFamily: font.family, fontWeight: '500', fontSize: 13, color: colors.textSecondary },
 });

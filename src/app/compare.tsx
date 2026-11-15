@@ -60,8 +60,8 @@ export default function Compare() {
         <IconButton name="chevronLeft" onPress={() => (router.canGoBack() ? router.back() : router.navigate('/trends'))} />
         <DemoBadge />
       </View>
-      <View style={{ paddingHorizontal: space.xl, marginTop: space.lg }}>
-        <T v="display" style={{ fontSize: 30 }}>Compare scans</T>
+      <View style={{ paddingHorizontal: space.lg, marginTop: space.lg }}>
+        <T v="display">Compare scans</T>
         <T v="small" style={{ marginTop: 4 }}>Identical camera, colour scale and anatomical registration.</T>
         <View style={{ marginTop: space.md }}>
           <ArchToggle />
@@ -69,9 +69,9 @@ export default function Compare() {
       </View>
 
       <View style={{ marginTop: space.lg, gap: 6 }}>
-        <T v="label" style={{ paddingHorizontal: space.xl }}>Before</T>
+        <T v="label" style={{ paddingHorizontal: space.lg }}>Before</T>
         <Segmented options={options} value={aId} onChange={setA} />
-        <T v="label" style={{ paddingHorizontal: space.xl, marginTop: 6 }}>After</T>
+        <T v="label" style={{ paddingHorizontal: space.lg, marginTop: 6 }}>After</T>
         <Segmented options={options} value={bId} onChange={setB} />
       </View>
 
@@ -141,7 +141,6 @@ export default function Compare() {
               const d = ra?.value != null && rb?.value != null ? rb.value - ra.value : null;
               return (
                 <View key={s.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: i ? StyleSheet.hairlineWidth : 0, borderTopColor: colors.hairline }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: BIOMARKERS[s.biomarker].color, marginRight: 8 }} />
                   <T v="small" style={{ flex: 1, color: colors.text }} numberOfLines={1}>{t.number} {t.surface.toLowerCase()} · {BIOMARKERS[s.biomarker].shortName}</T>
                   <View style={{ width: 56, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                     <StatusDot status={readingStatus(ra)} size={6} />
@@ -163,7 +162,7 @@ export default function Compare() {
 }
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: space.xl, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  header: { paddingHorizontal: space.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   handleHit: { position: 'absolute', top: 0, bottom: 0, width: 44, alignItems: 'center', justifyContent: 'center' },
   handleLine: { position: 'absolute', top: 0, bottom: 0, width: 1, backgroundColor: 'rgba(247,248,252,0.6)' },
   handleKnob: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.ivory, alignItems: 'center', justifyContent: 'center' },

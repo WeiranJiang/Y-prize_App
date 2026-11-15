@@ -63,12 +63,12 @@ export default function Overview() {
 
   return (
     <Screen>
-      <View style={{ paddingHorizontal: space.xl }}>
-        <T v="display" style={{ fontSize: 30 }}>Overview</T>
+      <View style={{ paddingHorizontal: space.lg }}>
+        <T v="display">Overview</T>
         <T v="small" style={{ marginTop: 2 }}>Your whole mouth, all biomarkers</T>
       </View>
       <View style={{ marginTop: space.lg }}>
-        <Segmented options={[{ key: '7', label: '7 days' }, { key: '30', label: '30 days' }, { key: '90', label: '90 days' }]} value={range} onChange={setRange} />
+        <Segmented fill options={[{ key: '7', label: '7D' }, { key: '30', label: '30D' }, { key: '90', label: '90D' }]} value={range} onChange={setRange} />
       </View>
 
       {/* Overall */}
@@ -111,7 +111,6 @@ export default function Overview() {
               <Pressable key={b.id} style={styles.tileWrap} onPress={() => router.navigate({ pathname: '/trends', params: { bio: b.id } })}>
                 <Card style={styles.tile}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: bm.color }} />
                     <T v="small" style={{ color: colors.text }}>{bm.shortName}</T>
                   </View>
                   <T v="number" style={{ fontSize: 28, marginTop: 8 }}>{pctTxt(b.inRange)}</T>
@@ -119,7 +118,7 @@ export default function Overview() {
                     {DIR[b.direction].arrow} {DIR[b.direction].word}
                   </T>
                   <View style={{ marginTop: 8 }}>
-                    <Mini points={b.history} color={b.concerns ? bm.color : colors.point} />
+                    <Mini points={b.history} color={b.concerns ? colors.high : colors.point} />
                   </View>
                 </Card>
               </Pressable>
@@ -156,7 +155,6 @@ function Chip({ id, note }: { id: keyof typeof BIOMARKERS; note?: string }) {
   const b = BIOMARKERS[id];
   return (
     <View style={styles.chip}>
-      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: b.color }} />
       <T v="small" style={{ color: colors.text }}>{b.shortName}</T>
       {note ? <T v="small" style={{ fontSize: 11 }}>· {note}</T> : null}
     </View>

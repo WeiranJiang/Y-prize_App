@@ -23,7 +23,7 @@ export default function ScanDetails() {
         <IconButton name="chevronLeft" onPress={() => (router.canGoBack() ? router.back() : router.navigate('/'))} />
         {scan.demo ? <DemoBadge /> : null}
       </View>
-      <View style={{ paddingHorizontal: space.xl, marginTop: space.lg }}>
+      <View style={{ paddingHorizontal: space.lg, marginTop: space.lg }}>
         <T v="label">Scan details</T>
         <T v="display" style={{ fontSize: 28, marginTop: 6 }}>
           {new Date(scan.at).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
@@ -70,5 +70,5 @@ export default function ScanDetails() {
 }
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: space.xl, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  header: { paddingHorizontal: space.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 });

@@ -61,7 +61,7 @@ export default function SiteDetail({ siteId, showExplore = true }: { siteId: str
 
       {series.length > 1 ? (
         <View style={{ marginTop: space.lg }}>
-          <Sparkline accent={b.color} points={series.map((p) => p.value)} bands={b.bands} height={44} />
+          <Sparkline points={series.map((p) => p.value)} bands={b.bands} height={44} />
           <T v="small" style={{ fontSize: 11, marginTop: 4 }}>Last {series.length} scans · gaps are scans where this site was not usable</T>
         </View>
       ) : null}
@@ -107,7 +107,7 @@ export default function SiteDetail({ siteId, showExplore = true }: { siteId: str
         </>
       ) : null}
 
-      <View style={{ marginTop: space.lg, padding: space.md, borderRadius: 12, backgroundColor: 'rgba(155,165,184,0.07)' }}>
+      <View style={{ marginTop: space.lg, padding: space.md, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.007)' }}>
         <T v="small">{b.limitation} This finding is not a diagnosis.</T>
       </View>
 

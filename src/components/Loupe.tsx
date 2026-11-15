@@ -6,10 +6,10 @@ import { BIOMARKERS, formatValue, STATUS_RANK, unitSuffix } from '../domain/biom
 import { toothByUniversal, toothNumber } from '../domain/teeth';
 import { useStore } from '../state/store';
 import RetainerView from '../three/RetainerView';
-import { Region } from '../three/regions';
+import { Region, STATUS_HEX } from '../three/regions';
 import { colors, space } from '../theme/tokens';
 import Icon from './Icon';
-import { T } from './ui';
+import { Button, T } from './ui';
 
 const ND = Platform.OS !== 'web';
 const SIZE = 248;
@@ -86,7 +86,7 @@ export default function Loupe({ tooth, regions, onClose }: { tooth: number | nul
                   const concern = r.status !== 'normal' && r.status !== 'unavailable';
                   return (
                     <View key={r.site.id} style={styles.row}>
-                      <View style={[styles.dot, { backgroundColor: concern ? b.color : r.status === 'unavailable' ? 'transparent' : colors.point }, r.status === 'unavailable' && styles.dashed]} />
+                      <View style={[styles.dot, { backgroundColor: concern ? STATUS_HEX[r.status] : r.status === 'unavailable' ? 'transparent' : colors.point }, r.status === 'unavailable' && styles.dashed]} />
                       <T v="small" style={{ flex: 1, color: colors.text }} numberOfLines={1}>
                         {b.shortName} <T v="small">· {siteTitle(r.site).surface.toLowerCase()}</T>
                       </T>
@@ -102,16 +102,10 @@ export default function Loupe({ tooth, regions, onClose }: { tooth: number | nul
               )}
             </ScrollView>
 
-            <Pressable
-              onPress={() => {
-                onClose();
-                router.navigate({ pathname: '/trends', params: { tooth: String(tooth) } });
-              }}
-              style={styles.link}
-            >
-              <Icon name="trends" size={16} color={colors.text} />
-              <T v="small" style={{ color: colors.text }}>See trends for this tooth</T>
-            </Pressable>
+            <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.md }}>
+              <Button compact label="Tooth details" style={{ flex: 1 }} onPress={() => { onClose(); router.push({ pathname: '/tooth', params: { u: String(tooth) } }); }} />
+              <Button compact kind="secondary" label="Trends" style={{ flex: 1 }} onPress={() => { onClose(); router.navigate({ pathname: '/trends', params: { tooth: String(tooth) } }); }} />
+            </View>
           </View>
         </Animated.View>
       </View>
@@ -120,8 +114,8 @@ export default function Loupe({ tooth, regions, onClose }: { tooth: number | nul
 }
 
 const styles = StyleSheet.create({
-  backdrop: { backgroundColor: 'rgba(3,4,16,0.72)' },
-  center: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.xl },
+  backdrop: { backgroundColor: 'rgba(0,0,0,0.78)' },
+  center: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.lg },
   lens: {
     width: SIZE,
     height: SIZE,
@@ -129,19 +123,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: colors.bg,
     borderWidth: 1.5,
-    borderColor: 'rgba(238,241,250,0.55)',
-    shadowColor: '#A9B8FF',
-    shadowOpacity: 0.35,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 0 },
+    borderColor: '#3A3A3A',
   },
-  glass: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: SIZE / 2, borderWidth: 6, borderColor: 'rgba(169,184,255,0.08)' },
+  glass: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: SIZE / 2, borderWidth: 6, borderColor: 'rgba(255,255,255,0.04)' },
   card: {
     width: 320,
     maxWidth: '100%',
     marginTop: space.lg,
     padding: space.lg,
-    borderRadius: 18,
+    borderRadius: 14,
     backgroundColor: colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairlineStrong,

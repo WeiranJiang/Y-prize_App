@@ -56,17 +56,17 @@ export default function ArchDiagram({
                   <Path d={ellipse} fill={m && !m.dashed ? m.color : 'transparent'} fillOpacity={on ? 0.36 : 0.18} stroke={stroke} strokeWidth={on ? 1.6 : 1} strokeDasharray={m?.dashed ? '2 2' : undefined} />
                 </G>
                 {m && !m.dashed ? <Circle cx={X} cy={Y} r={2.4} fill={m.color} /> : null}
-                <SvgText x={lx} y={ly + 3} fontSize={9} textAnchor="middle" fill={on ? colors.text : colors.textMuted} fontFamily={font.medium}>
+                <SvgText x={lx} y={ly + 3} fontSize={9} textAnchor="middle" fill={on ? colors.text : colors.textMuted} fontFamily={font.family} fontWeight="500">
                   {label}
                 </SvgText>
               </G>
             );
           })}
-          <SvgText x={cx} y={flip ? 34 : H - 30} fontSize={9.5} textAnchor="middle" fill={colors.textMuted} fontFamily={font.medium} letterSpacing={1}>
+          <SvgText x={cx} y={flip ? 34 : H - 30} fontSize={9.5} textAnchor="middle" fill={colors.textMuted} fontFamily={font.family} fontWeight="500" letterSpacing={1}>
             {flip ? 'LOWER ARCH' : 'UPPER ARCH'}
           </SvgText>
-          <SvgText x={10} y={H - 8} fontSize={9.5} fill={colors.textMuted} fontFamily={font.regular}>R</SvgText>
-          <SvgText x={w - 10} y={H - 8} fontSize={9.5} textAnchor="end" fill={colors.textMuted} fontFamily={font.regular}>L</SvgText>
+          <SvgText x={10} y={H - 8} fontSize={9.5} fill={colors.textMuted} fontFamily={font.family} fontWeight="400">R</SvgText>
+          <SvgText x={w - 10} y={H - 8} fontSize={9.5} textAnchor="end" fill={colors.textMuted} fontFamily={font.family} fontWeight="400">L</SvgText>
         </Svg>
       )}
     </View>

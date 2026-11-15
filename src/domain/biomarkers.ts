@@ -30,8 +30,6 @@ export interface Biomarker {
   /** Axis range for charts. */
   range: [number, number];
   statusWords: Record<Exclude<Status, 'unavailable'>, string>;
-  /** Identity colour on the 3D map (only shown where a reading is of concern). */
-  color: string;
   /** Uncertainty model: base + k / SNR (biomarker units). */
   unc: [number, number];
   /** Plain-English direction of concern, e.g. "more acidic". */
@@ -51,7 +49,6 @@ export const BIOMARKERS: Record<BiomarkerId, Biomarker> = {
       'A local pH reading is a research indicator. It reflects conditions at readout, not your whole wear period, and it cannot diagnose decay on its own.',
     bands: { concern: 'low', mild: 6.5, elevated: 6.0, high: 5.5 },
     range: [4.5, 7.8],
-    color: '#D95926',
     unc: [0.04, 0.6],
     concernWord: 'more acidic',
     statusWords: {
@@ -72,7 +69,6 @@ export const BIOMARKERS: Record<BiomarkerId, Biomarker> = {
     limitation: 'Lactate is a research indicator of local bacterial acid production. It reflects conditions at readout and does not diagnose decay.',
     bands: { concern: 'high', mild: 2, elevated: 5, high: 10 },
     range: [0, 15],
-    color: '#C98500',
     unc: [0.15, 8],
     concernWord: 'higher',
     statusWords: { normal: 'Within range', mild: 'Slightly raised', elevated: 'Raised', high: 'High' },
@@ -88,7 +84,6 @@ export const BIOMARKERS: Record<BiomarkerId, Biomarker> = {
     limitation: 'Calcium-ion readings are a research indicator of local mineral availability. They do not measure enamel loss directly.',
     bands: { concern: 'low', mild: 1.0, elevated: 0.7, high: 0.4 },
     range: [0, 2],
-    color: '#3987E5',
     unc: [0.03, 0.9],
     concernWord: 'lower',
     statusWords: { normal: 'Within range', mild: 'Slightly low', elevated: 'Low', high: 'Very low' },
@@ -104,7 +99,6 @@ export const BIOMARKERS: Record<BiomarkerId, Biomarker> = {
     limitation: 'Phosphate readings are a research indicator of local mineral availability, not a diagnosis.',
     bands: { concern: 'low', mild: 3, elevated: 2, high: 1 },
     range: [0, 8],
-    color: '#14A3A3',
     unc: [0.1, 4],
     concernWord: 'lower',
     statusWords: { normal: 'Within range', mild: 'Slightly low', elevated: 'Low', high: 'Very low' },
@@ -120,7 +114,6 @@ export const BIOMARKERS: Record<BiomarkerId, Biomarker> = {
     limitation: 'Local fluoride is a research indicator and varies with when you last brushed.',
     bands: { concern: 'low', mild: 0.05, elevated: 0.03, high: 0.01 },
     range: [0, 0.3],
-    color: '#C45BD0',
     unc: [0.004, 0.12],
     concernWord: 'lower',
     statusWords: { normal: 'Within range', mild: 'Slightly low', elevated: 'Low', high: 'Very low' },
@@ -136,7 +129,6 @@ export const BIOMARKERS: Record<BiomarkerId, Biomarker> = {
     limitation: 'Ammonium is a research indicator of local acid buffering, not a diagnosis.',
     bands: { concern: 'low', mild: 3, elevated: 2, high: 1 },
     range: [0, 10],
-    color: '#D55181',
     unc: [0.1, 4],
     concernWord: 'lower',
     statusWords: { normal: 'Within range', mild: 'Slightly low', elevated: 'Low', high: 'Very low' },

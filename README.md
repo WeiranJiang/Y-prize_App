@@ -34,11 +34,17 @@ EXPO_PUBLIC_CHAT_URL=http://<host>:8787/chat npx expo start
 
 The app sends the question, recent turns and a compact, de-identified summary of the readings. The server calls `claude-opus-5-5` at low effort, with server-side refusal fallback enabled. If the server can't be reached, the app falls back to the on-device assistant.
 
+## Design system (`src/theme/tokens.ts`, `src/components/ui.tsx`)
+
+Neutral, clinical dark UI: background `#0A0A0A`, surfaces `#141414` / `#1A1A1A` / `#242424`, borders `#303030`, text `#F5F5F5` / `#989898` / `#696969`. Colour is reserved for medical status and always paired with a label: green `#39A76D` (in range), amber `#D6A34A` (borderline), red `#E05252` (needs attention). SF Pro (system font) with tabular numbers. 8-pt spacing, 12–18px radii, flat surfaces, no shadows. Primary buttons are white with black text, and selection controls are iOS-style segmented controls. Charts use thin white lines, status-coloured markers, a shaded research range and touch-to-inspect.
+
+Key screens: Home dashboard, `/biomarker?id=` (biomarker detail with 1D/7D/30D/90D history and per-location list), `/tooth?u=` (tooth-level schematic with measurement locations and readings), `/scan` (full-screen scan flow).
+
 ## Arches and biomarkers
 
 Both upper and lower retainers carry a strip (28 and 15 sensing sites in the demo). The Upper/Lower toggle is global: every screen follows it, and one case readout scans both strips.
 
-Each biomarker has its own colour on the 3D map: pH orange-red, lactate amber, calcium blue, phosphate teal, fluoride orchid, ammonium rose. **Only readings that need attention are coloured**, deeper colour meaning more concern. In-range sites stay plain white dots. Withheld readings get a faint slate ring, so "not measured" is never mistaken for "healthy". With six hues, colour alone can't separate every pair for colour-blind viewers, so identity is always backed by a name: the legend, the per-biomarker filter and the tap label.
+On the 3D map **only readings that need attention are coloured**: amber for borderline, red for needs attention. In-range sites stay plain white dots. Withheld readings get a gray ring, so "not measured" is never mistaken for "healthy". Biomarker identity is given by name, never by colour.
 
 ## Biofouling & strip replacement (`src/domain/fouling.ts`)
 

@@ -34,14 +34,14 @@ export default function Sparkline({ points, bands, height = 36, domain, accent }
       {w > 0 && (
         <Svg width={w} height={height}>
           {bands ? <Line x1={pad} x2={w - pad} y1={y(bands.elevated)} y2={y(bands.elevated)} stroke={colors.hairlineStrong} strokeWidth={1} /> : null}
-          <Path d={d} stroke={colors.textSecondary} strokeWidth={1.6} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+          <Path d={d} stroke={colors.textSecondary} strokeWidth={1.25} fill="none" strokeLinejoin="round" strokeLinecap="round" />
           {points.map((v, i) =>
             v == null ? (
               <Circle key={i} cx={x(i)} cy={height - pad} r={2} stroke={colors.unavailable} strokeWidth={1} fill="none" />
             ) : null,
           )}
           {last != null ? (
-            <Circle cx={x(lastIdx)} cy={y(last)} r={4} fill={bands ? (accent ? (classify(last, bands) === 'normal' ? colors.point : accent) : STATUS_HEX[classify(last, bands)]) : colors.text} stroke={colors.surface} strokeWidth={2} />
+            <Circle cx={x(lastIdx)} cy={y(last)} r={3} fill={bands ? STATUS_HEX[classify(last, bands)] : colors.text} stroke={colors.surface} strokeWidth={1.5} />
           ) : null}
         </Svg>
       )}

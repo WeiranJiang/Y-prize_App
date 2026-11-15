@@ -144,3 +144,65 @@ export function buildOverview(scans: Scan[], strips: Strip[], days = 30): Overvi
     sites: latestScans.reduce((n, s) => n + s.readings.length, 0),
   };
 }
+
+export interface BiomarkerStat {
+  id: BiomarkerId;
+  /** Median of the latest usable readings across the chosen sites. */
+  median: number | null;
+  status: import('./biomarkers').Status;
+  sites: number;
+  attention: number;
+  borderline: number;
+  at: string | null;
+  /** Median per scan session, oldest first. */
+  series: { at: string; value: number | null }[];
+}
+
+const median = (xs: number[]) => {
+  if (!xs.length) return null;
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+};
+
+/**
+ * Summary of one biomarker across the current strips (optionally one arch):
+ * median of the latest readings plus counts by status. The median is a
+ * convenience summary — site-level values stay the primary data.
+ */
+export function biomarkerStat(id: BiomarkerId, scans: Scan[], strips: Strip[], days = 30, arch?: Arch): BiomarkerStat {
+  const b = BIOMARKERS[id];
+  const pool = strips.filter((s) => !arch || s.arch === arch);
+  const ids = new Set(pool.map((s) => s.id));
+  const current = pool.filter((s) => !s.retiredAt);
+  const latest = current
+    .map((st) => scans.filter((s) => s.stripId === st.id).sort((a, z) => +new Date(a.at) - +new Date(z.at)).pop())
+    .filter(Boolean) as Scan[];
+  const readings = latest.flatMap((s) => s.readings.filter((r) => r.biomarker === id));
+  const vals = readings.map((r) => r.value).filter((v): v is number => v != null);
+  const statuses = readings.map((r) => classify(r.value, b.bands));
+  const med = median(vals);
+  const cutoff = Date.now() - days * 86400000;
+  const groups = new Map<string, number[]>();
+  const times = new Map<string, string>();
+  for (const s of scans) {
+    if (!ids.has(s.stripId) || +new Date(s.at) < cutoff) continue;
+    const key = s.at.slice(0, 16);
+    times.set(key, s.at);
+    const v = s.readings.filter((r) => r.biomarker === id && r.value != null).map((r) => r.value as number);
+    groups.set(key, [...(groups.get(key) ?? []), ...v]);
+  }
+  const series = [...groups.entries()].sort((a, z) => (a[0] < z[0] ? -1 : 1)).map(([k, v]) => ({ at: times.get(k)!, value: median(v) }));
+  const attention = statuses.filter((s) => s === 'elevated' || s === 'high').length;
+  const borderline = statuses.filter((s) => s === 'mild').length;
+  return {
+    id,
+    median: med,
+    status: attention ? 'high' : borderline ? 'mild' : vals.length ? 'normal' : 'unavailable',
+    sites: readings.length,
+    attention,
+    borderline,
+    at: latest.map((s) => s.at).sort().pop() ?? null,
+    series,
+  };
+}

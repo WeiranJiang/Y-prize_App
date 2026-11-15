@@ -71,8 +71,8 @@ export default function Chat() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={{ paddingTop: insets.top + space.md, paddingHorizontal: space.xl }}>
-        <T v="display" style={{ fontSize: 30 }}>Ask</T>
+      <View style={{ paddingTop: insets.top + space.md, paddingHorizontal: space.lg }}>
+        <T v="display">Ask</T>
         <T v="small" style={{ marginTop: 2 }}>Answers come from your own readings. Not medical advice.</T>
       </View>
 
@@ -123,6 +123,6 @@ const styles = StyleSheet.create({
   suggest: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.pill, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairlineStrong },
   inputBar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: space.xl, paddingLeft: 16, paddingRight: 6, height: 50, borderRadius: radius.pill, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairlineStrong, backgroundColor: colors.bg2 },
-  input: { flex: 1, color: colors.text, fontFamily: font.regular, fontSize: 15, outlineStyle: 'none' } as object,
+  input: { flex: 1, color: colors.text, fontFamily: font.family, fontWeight: '400', fontSize: 15, outlineStyle: 'none' } as object,
   send: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.ivory, alignItems: 'center', justifyContent: 'center' },
 });

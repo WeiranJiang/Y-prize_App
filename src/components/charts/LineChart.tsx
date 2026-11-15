@@ -92,20 +92,25 @@ export default function LineChart(props: Props) {
         <Pressable onPressIn={onTouch} onPressOut={() => setTimeout(() => setHover(null), 1600)} {...webHover} style={{ flex: 1 }}>
           <Svg width={w} height={height} pointerEvents="none">
             {band ? (
-              <Rect x={PAD.l} width={iw} y={sy(Math.min(band.to, yDomain[1]))} height={Math.max(0, sy(Math.max(band.from, yDomain[0])) - sy(Math.min(band.to, yDomain[1])))} fill={colors.normal} opacity={0.07} />
+              <G>
+                <Rect x={PAD.l} width={iw} y={sy(Math.min(band.to, yDomain[1]))} height={Math.max(0, sy(Math.max(band.from, yDomain[0])) - sy(Math.min(band.to, yDomain[1])))} fill="#FFFFFF" opacity={0.045} />
+                {band.label ? (
+                  <SvgText x={PAD.l + iw - 4} y={sy(Math.min(band.to, yDomain[1])) + 11} fontSize={9.5} fill={colors.textMuted} textAnchor="end" fontFamily={font.family} fontWeight="500">{band.label}</SvgText>
+                ) : null}
+              </G>
             ) : null}
             {yTicks.map((t) => (
               <G key={t}>
-                <Line x1={PAD.l} x2={PAD.l + iw} y1={sy(t)} y2={sy(t)} stroke={colors.hairline} strokeWidth={1} />
-                <SvgText x={PAD.l - 8} y={sy(t) + 3.5} fontSize={10} fill={colors.textMuted} textAnchor="end" fontFamily={font.regular}>
+                <Line x1={PAD.l} x2={PAD.l + iw} y1={sy(t)} y2={sy(t)} stroke="#1F1F1F" strokeWidth={1} />
+                <SvgText x={PAD.l - 8} y={sy(t) + 3.5} fontSize={10} fill={colors.textMuted} textAnchor="end" fontFamily={font.family} fontWeight="400">
                   {formatY(t)}
                 </SvgText>
               </G>
             ))}
             {thresholds?.map((th) => (
               <G key={th.label}>
-                <Line x1={PAD.l} x2={PAD.l + iw} y1={sy(th.y)} y2={sy(th.y)} stroke={colors.textSecondary} strokeWidth={1} opacity={0.55} />
-                <SvgText x={PAD.l + 4} y={sy(th.y) - 5} fontSize={9.5} fill={colors.textSecondary} fontFamily={font.medium}>
+                <Line x1={PAD.l} x2={PAD.l + iw} y1={sy(th.y)} y2={sy(th.y)} stroke={colors.textMuted} strokeWidth={1} strokeDasharray="3 3" />
+                <SvgText x={PAD.l + 4} y={sy(th.y) - 5} fontSize={9.5} fill={colors.textSecondary} fontFamily={font.family} fontWeight="500">
                   {th.label}
                 </SvgText>
               </G>
@@ -113,17 +118,17 @@ export default function LineChart(props: Props) {
             {verticals?.map((v) => (
               <G key={v.label + v.x}>
                 <Line x1={sx(v.x)} x2={sx(v.x)} y1={PAD.t} y2={PAD.t + ih} stroke={colors.hairlineStrong} strokeWidth={1} />
-                <SvgText x={sx(v.x) + 4} y={PAD.t + 9} fontSize={9.5} fill={colors.textMuted} fontFamily={font.medium}>
+                <SvgText x={sx(v.x) + 4} y={PAD.t + 9} fontSize={9.5} fill={colors.textMuted} fontFamily={font.family} fontWeight="500">
                   {v.label}
                 </SvgText>
               </G>
             ))}
             {xTicks.map((x, i) => (
-              <SvgText key={i} x={sx(x)} y={height - 6} fontSize={10} fill={colors.textMuted} textAnchor={i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle'} fontFamily={font.regular}>
+              <SvgText key={i} x={sx(x)} y={height - 6} fontSize={10} fill={colors.textMuted} textAnchor={i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle'} fontFamily={font.family} fontWeight="400">
                 {formatX(x)}
               </SvgText>
             ))}
-            {hover != null ? <Line x1={sx(hover)} x2={sx(hover)} y1={PAD.t} y2={PAD.t + ih} stroke={colors.textSecondary} strokeWidth={1} opacity={0.6} /> : null}
+            {hover != null ? <Line x1={sx(hover)} x2={sx(hover)} y1={PAD.t} y2={PAD.t + ih} stroke={colors.textSecondary} strokeWidth={1} opacity={0.5} /> : null}
             {series.map((s) => {
               let d = '';
               let pen = false;
@@ -137,7 +142,7 @@ export default function LineChart(props: Props) {
               }
               return (
                 <G key={s.id}>
-                  <Path d={d} stroke={s.color} strokeWidth={2} fill="none" strokeLinejoin="round" strokeLinecap="round" strokeDasharray={s.dashed ? '4 5' : undefined} opacity={s.dashed ? 0.75 : 1} />
+                  <Path d={d} stroke={s.color} strokeWidth={1.5} fill="none" strokeLinejoin="round" strokeLinecap="round" strokeDasharray={s.dashed ? '4 5' : undefined} opacity={s.dashed ? 0.75 : 1} />
                   {s.markers !== false &&
                     s.points.map((p, i) =>
                       p.y == null ? (
@@ -147,10 +152,10 @@ export default function LineChart(props: Props) {
                           key={i}
                           cx={sx(p.x)}
                           cy={sy(p.y)}
-                          r={hover === p.x ? 5.5 : 4}
+                          r={hover === p.x ? 5 : 3.25}
                           fill={p.hollow ? surface : (s.markerColor?.(p) ?? s.color)}
                           stroke={p.hollow ? (s.markerColor?.(p) ?? s.color) : surface}
-                          strokeWidth={p.hollow ? 1.6 : 2}
+                          strokeWidth={p.hollow ? 1.4 : 1.5}
                         />
                       ),
                     )}
@@ -163,7 +168,7 @@ export default function LineChart(props: Props) {
                 if (!last || last.y == null) return null;
                 return (
                   <G key={s.id + 'lbl'}>
-                    <SvgText x={sx(last.x) + 9} y={sy(last.y) + 3.5} fontSize={10.5} fill={colors.text} fontFamily={font.medium}>
+                    <SvgText x={sx(last.x) + 9} y={sy(last.y) + 3.5} fontSize={10.5} fill={colors.text} fontFamily={font.family} fontWeight="500">
                       {s.label.length > 9 ? `${s.label.slice(0, 8)}…` : s.label}
                     </SvgText>
                   </G>
@@ -179,7 +184,7 @@ export default function LineChart(props: Props) {
                 left: Math.min(Math.max(PAD.l, sx(hover) - 70), w - 150),
                 width: 140,
                 backgroundColor: colors.surfaceRaised,
-                borderRadius: 10,
+                borderRadius: 8,
                 borderWidth: 1,
                 borderColor: colors.hairlineStrong,
                 paddingHorizontal: 10,

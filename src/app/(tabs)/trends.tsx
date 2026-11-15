@@ -7,15 +7,16 @@ import ColumnChart from '../../components/charts/ColumnChart';
 import LineChart, { LPoint } from '../../components/charts/LineChart';
 import Sparkline from '../../components/charts/Sparkline';
 import Icon from '../../components/Icon';
-import { Card, DemoBadge, Screen, Section, Segmented, StatusDot, T } from '../../components/ui';
+import { Card, DemoBadge, Screen, Section, Segmented, StatusDot, T, Tabs } from '../../components/ui';
 import { persistentSites, siteSeries, siteTitle } from '../../domain/analysis';
 import { BIOMARKER_ORDER, BIOMARKERS, BiomarkerId, classify, formatDelta, formatValue, STATUS_RANK, unitSuffix } from '../../domain/biomarkers';
 import { usableFractionOf } from '../../domain/fouling';
 import { toothByUniversal, toothNumber } from '../../domain/teeth';
 import { useStore } from '../../state/store';
+import { STATUS_HEX } from '../../three/regions';
 import { colors, space } from '../../theme/tokens';
 
-type Range = '7' | '30' | '90' | 'all';
+type Range = '1' | '7' | '30' | '90';
 
 const dayFmt = (x: number) => new Date(x).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 const tipFmt = (x: number) => new Date(x).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -54,7 +55,7 @@ export default function Trends() {
   const fmt = (v: number) => formatValue(b, v);
 
   const scans = useMemo(() => {
-    const cutoff = range === 'all' ? 0 : Date.now() - Number(range) * 86400000;
+    const cutoff = Date.now() - Number(range) * 86400000;
     return state.scans.filter((s) => +new Date(s.at) >= cutoff).sort((a, z) => +new Date(a.at) - +new Date(z.at));
   }, [state.scans, range]);
   const archStripIds = new Set(state.strips.filter((s) => s.arch === arch).map((s) => s.id));
@@ -101,7 +102,7 @@ export default function Trends() {
   const marks = new Map<number, { color: string; dashed?: boolean }>();
   for (const x of sitesSorted) {
     if (x.status === 'normal' || marks.has(x.s.toothUniversal)) continue;
-    marks.set(x.s.toothUniversal, x.status === 'unavailable' ? { color: colors.unavailable, dashed: true } : { color: b.color });
+    marks.set(x.s.toothUniversal, x.status === 'unavailable' ? { color: colors.unavailable, dashed: true } : { color: STATUS_HEX[x.status] });
   }
   const toothSites = selTooth != null ? archSites.filter((s) => s.toothUniversal === selTooth) : [];
   const otherOnTooth = selTooth != null ? [...new Set(strip.sites.filter((s) => s.toothUniversal === selTooth && s.biomarker !== bio).map((s) => s.biomarker))] : [];
@@ -139,20 +140,20 @@ export default function Trends() {
 
   return (
     <Screen>
-      <View style={{ paddingHorizontal: space.xl, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <View style={{ paddingHorizontal: space.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <View>
-          <T v="display" style={{ fontSize: 30 }}>Trends</T>
+          <T v="display">Trends</T>
           <T v="small" style={{ marginTop: 2 }}>{archScans.length} scans in range · {arch} teeth</T>
         </View>
         <DemoBadge />
       </View>
 
       <View style={{ marginTop: space.lg, gap: 8 }}>
-        <Segmented options={[{ key: '7', label: '7 days' }, { key: '30', label: '30 days' }, { key: '90', label: '90 days' }, { key: 'all', label: 'All time' }]} value={range} onChange={setRange} />
-        <Segmented options={bioOptions} value={bio} onChange={(k) => (strip.supported.includes(k) ? setBio(k) : null)} />
+        <Segmented fill options={[{ key: '1', label: '1D' }, { key: '7', label: '7D' }, { key: '30', label: '30D' }, { key: '90', label: '90D' }]} value={range} onChange={setRange} />
+        <Tabs options={bioOptions} value={bio} onChange={(k) => (strip.supported.includes(k) ? setBio(k) : null)} />
       </View>
 
-      <View style={{ paddingHorizontal: space.xl, marginTop: space.lg }}>
+      <View style={{ paddingHorizontal: space.lg, marginTop: space.lg }}>
         <ArchToggle onChange={() => setToothSel(null)} />
       </View>
 
@@ -174,7 +175,6 @@ export default function Trends() {
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: space.md }}>
                   {otherOnTooth.map((id) => (
                     <Pressable key={id} onPress={() => setBio(id)} style={styles.chip}>
-                      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: BIOMARKERS[id].color }} />
                       <T v="small" style={{ color: colors.text }}>{BIOMARKERS[id].shortName}</T>
                     </Pressable>
                   ))}
@@ -189,7 +189,7 @@ export default function Trends() {
                 const st = classify(last?.value ?? null, b.bands);
                 return (
                   <View key={s.id} style={[styles.nowRow, i > 0 && styles.rowBorder]}>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: st === 'normal' ? colors.point : st === 'unavailable' ? 'transparent' : b.color, borderWidth: st === 'unavailable' ? 1 : 0, borderColor: colors.unavailable }} />
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: st === 'unavailable' ? 'transparent' : STATUS_HEX[st], borderWidth: st === 'unavailable' ? 1 : 0, borderColor: colors.unavailable }} />
                     <T v="small" style={{ flex: 1, color: colors.text }} numberOfLines={1}>{siteTitle(s, numbering).surface}</T>
                     <T v="number" style={{ fontSize: 22 }}>{last?.value == null ? '—' : fmt(last.value)}<T v="small">{unitSuffix(b)}</T></T>
                     <T v="small" style={{ width: 104, textAlign: 'right', fontSize: 11 }} numberOfLines={2}>{st === 'unavailable' ? 'Not measured' : st === 'normal' ? 'In range' : b.statusWords[st]}</T>
@@ -204,7 +204,7 @@ export default function Trends() {
                     label: siteTitle(s, numbering).surface,
                     color: toothSites.length === 1 ? colors.text : [colors.seriesA, colors.seriesB][i],
                     points: toPoints(s.id),
-                    markerColor: toothSites.length === 1 ? (p: LPoint) => (classify(p.y, b.bands) === 'normal' ? colors.point : b.color) : undefined,
+                    markerColor: toothSites.length === 1 ? (p: LPoint) => STATUS_HEX[classify(p.y, b.bands)] : undefined,
                   }));
                   return (
                     <>
@@ -254,7 +254,7 @@ export default function Trends() {
                   <T v="small" style={{ fontSize: 11 }} numberOfLines={1}>{t.tooth.shortName}{s.role === 'comparison' ? ' · ref' : ''}</T>
                 </View>
                 <View style={{ flex: 1, paddingHorizontal: 10 }}>
-                  <Sparkline accent={b.color} points={series.map((p) => p.value)} bands={b.bands} height={30} domain={yDomain} />
+                  <Sparkline points={series.map((p) => p.value)} bands={b.bands} height={30} domain={yDomain} />
                 </View>
                 <View style={{ width: 54, alignItems: 'flex-end' }}>
                   <T v="bodyStrong" style={{ fontVariant: ['tabular-nums'], color: last?.value == null ? colors.textSecondary : colors.text }}>{last?.value == null ? 'n/a' : formatValue(b, last.value)}</T>
@@ -338,7 +338,7 @@ export default function Trends() {
                   </View>
                   <View style={{ flexDirection: 'row', gap: 3 }}>
                     {Array.from({ length: p.valid }).map((_, k) => (
-                      <View key={k} style={{ width: 6, height: 16, borderRadius: 2, backgroundColor: k >= p.valid - p.below ? b.color : colors.hairlineStrong }} />
+                      <View key={k} style={{ width: 6, height: 16, borderRadius: 2, backgroundColor: k >= p.valid - p.below ? colors.high : colors.surfaceRaised }} />
                     ))}
                   </View>
                 </Pressable>
@@ -359,7 +359,7 @@ export default function Trends() {
                 return {
                   key: s.id,
                   value: u,
-                  color: u < state.settings.limits.usableMin ? colors.elevated : late ? colors.mild : colors.normal,
+                  color: u < state.settings.limits.usableMin ? colors.high : late ? colors.mild : '#3A3A3A',
                   label: i === 0 || i === archScans.length - 1 || (i > 0 && s.stripId !== archScans[i - 1].stripId) ? dayFmt(+new Date(s.at)) : undefined,
                   tooltip: `${tipFmt(+new Date(s.at))}\n${Math.round(u * 100)}% usable${late ? ' · read late' : ''}`,
                 };

@@ -8,7 +8,7 @@ import { colors, space } from '../theme/tokens';
 export default function About() {
   return (
     <Screen>
-      <View style={{ paddingHorizontal: space.xl }}>
+      <View style={{ paddingHorizontal: space.lg }}>
         <IconButton name="chevronLeft" onPress={() => (router.canGoBack() ? router.back() : router.navigate('/'))} />
         <T v="display" style={{ fontSize: 30, marginTop: space.lg }}>How findings are made</T>
         <T v="body" style={{ marginTop: space.md }}>
