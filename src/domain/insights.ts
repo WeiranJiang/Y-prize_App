@@ -5,10 +5,10 @@
  * Observed / Interpreted / Recommended separate. Nothing here diagnoses.
  */
 import { analyzeScan, confidenceOf, persistentSites, ScanAnalysis, siteSeries, siteTitle, surfaceLabel } from './analysis';
-import { BIOMARKERS, Status, STATUS_RANK } from './biomarkers';
+import { BIOMARKERS, BiomarkerId, formatValue, Status, STATUS_RANK } from './biomarkers';
 import type { StripHealth } from './fouling';
 import { pct } from './fouling';
-import type { NumberingSystem } from './teeth';
+import { NumberingSystem, toothByUniversal } from './teeth';
 import type { Scan, Strip } from './types';
 
 export type InsightKind = 'finding' | 'stable' | 'quality' | 'strip' | 'routine';
@@ -41,15 +41,64 @@ export interface Recommendation {
 const f1 = (v: number | null | undefined) => (v == null ? '—' : v.toFixed(1));
 
 function regionPhrase(sites: { site: { toothUniversal: number } }[]) {
-  const teeth = sites.map((s) => s.site.toothUniversal);
-  const right = teeth.every((t) => t <= 8);
-  const left = teeth.every((t) => t >= 9);
-  const posterior = teeth.every((t) => t <= 5 || t >= 12);
-  const anterior = teeth.every((t) => t >= 6 && t <= 11);
-  const side = right ? 'upper right' : left ? 'upper left' : 'upper';
-  const zone = posterior ? 'posterior' : anterior ? 'anterior' : '';
-  return `${side} ${zone}`.replace(/\s+/g, ' ').trim();
+  const teeth = sites.map((s) => toothByUniversal(s.site.toothUniversal));
+  const arch = teeth.every((t) => t.arch === 'upper') ? 'upper' : teeth.every((t) => t.arch === 'lower') ? 'lower' : '';
+  const side = teeth.every((t) => t.side === 'right') ? 'right' : teeth.every((t) => t.side === 'left') ? 'left' : '';
+  const zone = teeth.every((t) => t.position >= 4) ? 'posterior' : teeth.every((t) => t.position <= 3) ? 'anterior' : '';
+  return `${arch} ${side} ${zone}`.replace(/\s+/g, ' ').trim() || 'monitored';
 }
+
+/** Biomarker-specific plain-English interpretation and advice. Never diagnostic. */
+export const COPY: Record<BiomarkerId, { finding: string; repeated: string; interpret: string; single: string; advice: (interdental: boolean) => string; rec: string }> = {
+  pH: {
+    finding: 'Elevated acidity detected',
+    repeated: 'Repeated low pH',
+    interpret: 'The local environment at this measured location has been more acidic than the comparison site across recent scans. This can accompany plaque that is actively producing acid, but a pH reading alone does not show that a cavity is forming.',
+    single: 'A single low reading can reflect a recent meal or drink, or local plaque. One scan is not enough to identify a pattern.',
+    advice: (i) => (i ? 'Give extra attention to cleaning between these teeth (floss or an interdental brush), and mention the recurring readings at your next dental visit.' : 'Brush this area carefully along the gumline, and mention the recurring readings at your next dental visit.'),
+    rec: 'Spend extra attention flossing between the highlighted',
+  },
+  lactate: {
+    finding: 'Raised lactate detected',
+    repeated: 'Repeated raised lactate',
+    interpret: 'Lactate is produced when plaque bacteria ferment sugars. Higher local lactate suggests more acid-producing activity at this spot. It does not show damage to the tooth.',
+    single: 'Lactate rises briefly after sugary food or drink. One raised reading is not a pattern.',
+    advice: (i) => `Reduce how often you have sugary snacks and drinks between meals, and clean ${i ? 'between these teeth' : 'this area'} thoroughly.`,
+    rec: 'Cut down on between-meal sugars and clean around the highlighted',
+  },
+  calcium: {
+    finding: 'Low calcium detected',
+    repeated: 'Repeatedly low calcium',
+    interpret: 'Free calcium near the enamel has been lower than the configured range. Less available mineral can mean less natural repair at this spot. It does not measure enamel loss.',
+    single: 'Calcium near the surface varies with saliva flow and recent meals. One low reading is not a pattern.',
+    advice: () => 'Use a fluoride toothpaste twice daily and spit, don\'t rinse, after brushing. Ask your dentist whether a remineralising product suits you.',
+    rec: 'Spit, don\'t rinse, after brushing near the highlighted',
+  },
+  phosphate: {
+    finding: 'Low phosphate detected',
+    repeated: 'Repeatedly low phosphate',
+    interpret: 'Phosphate works with calcium to help enamel repair. Lower local phosphate means less mineral available at this spot. It is not a diagnosis.',
+    single: 'Phosphate varies with saliva and diet. One low reading is not a pattern.',
+    advice: () => 'Keep up fluoride toothpaste twice daily and stay well hydrated. Mention persistent readings to your dentist.',
+    rec: 'Stay hydrated and keep your fluoride routine for the highlighted',
+  },
+  fluoride: {
+    finding: 'Low fluoride detected',
+    repeated: 'Repeatedly low fluoride',
+    interpret: 'Little fluoride was available at this spot at readout. Fluoride levels fall naturally in the hours after brushing.',
+    single: 'Fluoride drops between brushes. One low reading is expected and not a concern by itself.',
+    advice: () => 'Brush with a fluoride toothpaste twice daily and spit, don\'t rinse, so fluoride stays on the teeth longer.',
+    rec: 'Spit, don\'t rinse, after fluoride brushing near the highlighted',
+  },
+  ammonium: {
+    finding: 'Low ammonium detected',
+    repeated: 'Repeatedly low ammonium',
+    interpret: 'Ammonium helps neutralise acid locally. Lower levels mean less natural buffering at this spot. It is a research indicator only.',
+    single: 'Ammonium varies with diet and saliva. One low reading is not a pattern.',
+    advice: () => 'Stay hydrated and keep your usual cleaning routine; mention persistent readings to your dentist.',
+    rec: 'Stay hydrated and keep cleaning the highlighted',
+  },
+};
 
 export function buildInsights(
   scan: Scan,
@@ -66,53 +115,58 @@ export function buildInsights(
   const persistent = persistentSites(strip, stripScans);
   const persistentIds = new Set(persistent.map((p) => p.site.id));
 
-  // Rule R1 — repeated low pH at a site
+  // Rule R1 — repeated concern at a site (any biomarker)
   for (const p of persistent) {
     const r = a.results.find((x) => x.site.id === p.site.id)!;
     if (r.reading.value == null) continue;
+    const bm = BIOMARKERS[r.site.biomarker];
+    const c = COPY[r.site.biomarker];
     const t = siteTitle(r.site, system);
     const interdental = r.site.surface === 'mesial' || r.site.surface === 'distal';
+    const thr = bm.bands.elevated;
+    const cmp = bm.bands.concern === 'low' ? '<' : '>';
     out.push({
       id: `R1-${r.site.id}`,
-      rule: 'R1 · Repeated low local pH',
+      rule: `R1 · Repeated ${bm.shortName} finding`,
       kind: 'finding',
       status: r.status,
-      title: interdental ? 'Repeated low pH at an interdental site' : 'Repeated low pH at a monitored site',
-      summary: `Your ${regionPhrase([r])} region showed a lower pH than neighbouring measured sites in ${p.below} of your last ${p.valid} valid scans.`,
-      observed: `${t.title} (${t.number}), ${t.surface.toLowerCase()}: pH ${f1(r.reading.value)} ± ${r.reading.uncertainty.toFixed(1)} at this scan${ref != null ? `; comparison site pH ${f1(ref)}` : ''}. Below pH ${pHb.elevated.toFixed(1)} in ${p.below} of ${p.valid} recent valid scans.`,
-      interpreted: `The local environment at this measured location has been more acidic than the comparison site across recent scans. This can accompany plaque that is actively producing acid, but a pH reading alone does not show that a cavity is forming.`,
-      recommended: interdental
-        ? 'Give extra attention to cleaning between these teeth (floss or an interdental brush), and mention the recurring readings at your next dental visit.'
-        : 'Brush this area carefully along the gumline, and mention the recurring readings at your next dental visit.',
-      criterion: `Configured research threshold: pH < ${pHb.elevated.toFixed(1)} in ≥3 of the last 5 valid scans (readings outside the readout window excluded).`,
-      biomarker: 'pH',
+      title: `${c.repeated}${interdental ? ' at an interdental site' : ''}`,
+      summary: `Your ${regionPhrase([r])} region read ${bm.concernWord} ${bm.shortName === 'pH' ? '' : `${bm.shortName.toLowerCase()} `}than the configured range in ${p.below} of your last ${p.valid} valid scans.`.replace('  ', ' '),
+      observed: `${t.title} (${t.number}), ${t.surface.toLowerCase()}: ${bm.shortName} ${formatValue(bm, r.reading.value)} ± ${formatValue(bm, r.reading.uncertainty)} ${bm.unit === 'pH' ? '' : bm.unit}${r.site.biomarker === 'pH' && ref != null ? `; comparison site pH ${f1(ref)}` : ''}. ${cmp === '<' ? 'Below' : 'Above'} ${formatValue(bm, thr)} in ${p.below} of ${p.valid} recent valid scans.`,
+      interpreted: c.interpret,
+      recommended: c.advice(interdental),
+      criterion: `Configured research threshold: ${bm.shortName} ${cmp} ${formatValue(bm, thr)} ${bm.unit === 'pH' ? '' : bm.unit} in ≥3 of the last 5 valid scans (readings outside the readout window excluded).`,
+      biomarker: r.site.biomarker,
       siteIds: [r.site.id],
       confidence: confidenceOf(r.reading.quality) === 'Low' ? 'Moderate' : 'High',
-      priority: 100 + STATUS_RANK[r.status] * 10,
-      action: { label: 'View site', href: `/explore?tooth=${r.site.toothUniversal}&site=${r.site.id}` },
+      priority: 100 + STATUS_RANK[r.status] * 10 + (r.site.biomarker === 'pH' ? 2 : 0),
+      action: { label: 'View site', href: `/?tooth=${r.site.toothUniversal}` },
     });
   }
 
-  // Rule R2 — newly elevated acidity (single-scan finding)
+  // Rule R2 — newly concerning reading (single-scan finding, any biomarker)
   const fresh = a.reviewSites.filter((r) => !persistentIds.has(r.site.id));
   for (const r of fresh) {
+    const bm = BIOMARKERS[r.site.biomarker];
+    const c = COPY[r.site.biomarker];
     const t = siteTitle(r.site, system);
+    const cmp = bm.bands.concern === 'low' ? '<' : '>';
     out.push({
       id: `R2-${r.site.id}`,
-      rule: 'R2 · Elevated acidity at this scan',
+      rule: `R2 · ${bm.shortName} at this scan`,
       kind: 'finding',
       status: r.status,
-      title: 'Elevated acidity detected',
-      summary: `Your ${regionPhrase([r])} region read more acidic than usual at ${t.surface.toLowerCase()} of ${t.number}.`,
-      observed: `${t.title} (${t.number}), ${t.surface.toLowerCase()}: pH ${f1(r.reading.value)}${r.previous ? `, previously ${f1(r.previous.value)}` : ''}${ref != null ? `; comparison site pH ${f1(ref)}` : ''}.`,
-      interpreted: 'A single low reading can reflect a recent meal or drink, or local plaque. One scan is not enough to identify a pattern.',
-      recommended: 'Clean this area thoroughly today and repeat your usual scan. If low readings recur here, the app will flag it as a repeated finding.',
-      criterion: `Configured research threshold: pH < ${pHb.elevated.toFixed(1)} at the latest valid scan, not yet recurring.`,
-      biomarker: 'pH',
+      title: c.finding,
+      summary: `Your ${regionPhrase([r])} region read ${bm.concernWord} than usual at the ${t.surface.toLowerCase()} of ${t.number}.`,
+      observed: `${t.title} (${t.number}), ${t.surface.toLowerCase()}: ${bm.shortName} ${formatValue(bm, r.reading.value)} ${bm.unit === 'pH' ? '' : bm.unit}${r.previous ? `, previously ${formatValue(bm, r.previous.value)}` : ''}${r.site.biomarker === 'pH' && ref != null ? `; comparison site pH ${f1(ref)}` : ''}.`,
+      interpreted: c.single,
+      recommended: `${c.advice(r.site.surface === 'mesial' || r.site.surface === 'distal')} Repeat your usual scan; if it recurs, the app will flag it as a repeated finding.`,
+      criterion: `Configured research threshold: ${bm.shortName} ${cmp} ${formatValue(bm, bm.bands.elevated)} ${bm.unit === 'pH' ? '' : bm.unit} at the latest valid scan, not yet recurring.`,
+      biomarker: r.site.biomarker,
       siteIds: [r.site.id],
       confidence: confidenceOf(r.reading.quality),
       priority: 80 + STATUS_RANK[r.status] * 10,
-      action: { label: 'View site', href: `/explore?tooth=${r.site.toothUniversal}&site=${r.site.id}` },
+      action: { label: 'View site', href: `/?tooth=${r.site.toothUniversal}` },
     });
   }
 
@@ -236,7 +290,7 @@ export function buildInsights(
     kind: 'routine',
     status: 'info',
     title: 'Keep your fluoride routine',
-    summary: `${a.results.filter((r) => r.status === 'normal').length} of ${a.total} sites read within range${mild.length ? `; ${mild.length} slightly acidic` : ''}.`,
+    summary: `${a.results.filter((r) => r.status === 'normal').length} of ${a.total} sites read within range${mild.length ? `; ${mild.length} slightly outside range` : ''}.`,
     observed: `${a.results.filter((r) => r.status === 'normal').length} sites within range at this scan.`,
     interpreted: 'Most monitored locations show no abnormal local acidity.',
     recommended: 'Maintain your usual fluoride toothpaste routine, twice daily.',
@@ -256,10 +310,11 @@ export function buildInsights(
     if (recommendations.length >= 3) break;
     if (i.rule.startsWith('R1')) {
       const site = a.results.find((r) => r.site.id === i.siteIds[0])!;
-      add('floss', `Spend extra attention flossing between the highlighted ${regionPhrase([site])} teeth.`, `Low pH recurred at ${surfaceLabel(site.tooth, site.site.surface).toLowerCase()} of ${siteTitle(site.site, system).number}.`, i.id);
-      add('dentist', 'Review recurring acidic readings with your dentist.', 'The same site has crossed the research threshold in several recent scans.', i.id);
+      const bm = BIOMARKERS[site.site.biomarker];
+      add(`rec-${site.site.biomarker}`, `${COPY[site.site.biomarker].rec} ${regionPhrase([site])} teeth.`, `${bm.shortName} was ${bm.concernWord} than the range again at the ${surfaceLabel(site.tooth, site.site.surface).toLowerCase()} of ${siteTitle(site.site, system).number}.`, i.id);
+      add('dentist', 'Review recurring findings with your dentist.', 'The same site has crossed a research threshold in several recent scans.', i.id);
     } else if (i.rule.startsWith('R2')) {
-      add('clean-' + i.id, 'Clean the highlighted area thoroughly and scan again tomorrow.', 'A single reading crossed the threshold; a repeat shows whether it recurs.', i.id);
+      add('clean', 'Clean the highlighted area thoroughly and scan again tomorrow.', 'A single reading crossed the threshold; a repeat shows whether it recurs.', i.id);
     } else if (i.rule.startsWith('R4')) {
       add('strip', i.recommended, i.summary, i.id);
     } else if (i.rule.startsWith('R5')) {

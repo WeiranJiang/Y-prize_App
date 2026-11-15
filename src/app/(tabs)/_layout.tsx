@@ -7,10 +7,10 @@ import { colors, font } from '../../theme/tokens';
 
 const TABS: { name: string; label: string; icon: IconName }[] = [
   { name: 'index', label: 'Home', icon: 'home' },
-  { name: 'scan', label: 'Scan', icon: 'scan' },
-  { name: 'explore', label: 'Explore', icon: 'explore' },
   { name: 'trends', label: 'Trends', icon: 'trends' },
-  { name: 'profile', label: 'Profile', icon: 'profile' },
+  { name: 'overview', label: 'Overview', icon: 'pulse' },
+  { name: 'chat', label: 'Ask', icon: 'chat' },
+  { name: 'strips', label: 'Strips', icon: 'box' },
 ];
 
 function TabBar({ state, navigateToTab, insets }: BottomTabBarProps) {

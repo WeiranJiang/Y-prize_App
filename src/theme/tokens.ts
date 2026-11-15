@@ -29,7 +29,7 @@ export const colors = {
   seriesA: '#4C78E8',
   seriesB: '#C47A3C',
 
-  point: '#DCE3F2',
+  point: '#EEF1FA',
   accent: '#A9B8FF',
 } as const;
 

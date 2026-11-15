@@ -6,11 +6,11 @@
  * fades out entirely — unmeasured areas stay neutral and are never
  * interpolated. A dotted ring marks the edge of each measured area, and
  * withheld readings render slate-grey with the same ring so "unmeasured" is
- * never confused with "healthy".
+ * never confused with "healthy". Healthy readings are not coloured at all.
  */
 import { siteAnchor, Vec3 } from '../domain/arch';
 import { analyzeScan, readingStatus } from '../domain/analysis';
-import { Status } from '../domain/biomarkers';
+import { BIOMARKERS, Status } from '../domain/biomarkers';
 import type { Scan, Strip } from '../domain/types';
 import { colors } from '../theme/tokens';
 import type { PointCloud } from './retainerGeometry';
@@ -39,38 +39,54 @@ export const STATUS_HEX: Record<Status, string> = {
 
 export type ViewMode = 'overview' | 'pH' | 'lactate' | 'calcium' | 'phosphate' | 'fluoride' | 'ammonium' | 'signal';
 
+/** Severity → how strongly the biomarker colour replaces the white dots. */
+export const SEVERITY_INTENSITY: Record<Exclude<Status, 'normal' | 'unavailable'>, number> = {
+  mild: 0.5,
+  elevated: 0.78,
+  high: 1,
+};
+
+/**
+ * Only readings of concern are coloured, each in its biomarker's colour
+ * (deeper = more concern). Healthy sites stay plain white dots. Withheld
+ * readings get a faint slate ring so "not measured" is never read as healthy.
+ */
 export function regionsForScan(scan: Scan | undefined, strip: Strip | undefined, mode: ViewMode): Region[] {
   if (!scan || !strip) return [];
   if (mode === 'signal') return signalRegions(scan, strip);
   if (mode !== 'overview' && !strip.supported.includes(mode)) return [];
   const a = analyzeScan(scan, strip, []);
-  return a.results
-    .filter((r) => mode === 'overview' || r.site.biomarker === mode)
-    .map((r) => {
-      const { p, n } = siteAnchor(r.site.toothUniversal, r.site.surface);
-      const status = readingStatus(r.reading);
-      return {
-        id: r.site.id,
-        tooth: r.site.toothUniversal,
-        anchor: p,
-        normal: n,
-        radius: r.site.footprintMm,
-        color: STATUS_HEX[status],
-        intensity: status === 'normal' ? 0.5 : status === 'unavailable' ? 0.75 : 1,
-        outline: true,
-        wrap: r.site.surface === 'mesial' || r.site.surface === 'distal',
-      };
+  const out: Region[] = [];
+  for (const r of a.results) {
+    if (mode !== 'overview' && r.site.biomarker !== mode) continue;
+    const status = readingStatus(r.reading);
+    if (status === 'normal') continue;
+    const { p, n } = siteAnchor(r.site.toothUniversal, r.site.surface, r.site.offset);
+    out.push({
+      id: r.site.id,
+      tooth: r.site.toothUniversal,
+      anchor: p,
+      normal: n,
+      radius: r.site.footprintMm,
+      color: status === 'unavailable' ? colors.unavailable : BIOMARKERS[r.site.biomarker].color,
+      intensity: status === 'unavailable' ? 0.55 : SEVERITY_INTENSITY[status],
+      outline: true,
+      wrap: r.site.surface === 'mesial' || r.site.surface === 'distal',
     });
+  }
+  return out;
 }
 
 /** Strip-health view: local optical transmission per site + reference spots. */
 export function signalRegions(scan: Scan, strip: Strip): Region[] {
-  const tColor = (t: number, usable: boolean) =>
-    !usable ? colors.high : t >= 0.8 ? colors.normal : t >= 0.7 ? colors.mild : colors.elevated;
-  const sites = strip.sites.map((s) => {
+  // Clear (≥80% transmission) areas stay white; only film build-up is coloured.
+  const tColor = (t: number, usable: boolean) => (!usable ? colors.high : t >= 0.7 ? colors.mild : colors.elevated);
+  const out: Region[] = [];
+  for (const s of strip.sites) {
     const r = scan.readings.find((x) => x.siteId === s.id)!;
-    const { p, n } = siteAnchor(s.toothUniversal, s.surface);
-    return {
+    if (r.value != null && r.transmission >= 0.8) continue;
+    const { p, n } = siteAnchor(s.toothUniversal, s.surface, s.offset);
+    out.push({
       id: s.id,
       tooth: s.toothUniversal,
       anchor: p,
@@ -80,12 +96,13 @@ export function signalRegions(scan: Scan, strip: Strip): Region[] {
       intensity: 0.95,
       outline: true,
       wrap: s.surface === 'mesial' || s.surface === 'distal',
-    };
-  });
-  const refs = strip.referenceSpots.map((spot) => {
+    });
+  }
+  for (const spot of strip.referenceSpots) {
     const ref = scan.references.find((x) => x.spotId === spot.id);
+    if (ref && ref.transmission >= 0.8) continue;
     const { p, n } = siteAnchor(spot.toothUniversal, spot.surface);
-    return {
+    out.push({
       id: spot.id,
       tooth: spot.toothUniversal,
       anchor: p,
@@ -94,9 +111,9 @@ export function signalRegions(scan: Scan, strip: Strip): Region[] {
       color: ref ? tColor(ref.transmission, true) : colors.unavailable,
       intensity: 0.9,
       outline: true,
-    };
-  });
-  return [...sites, ...refs];
+    });
+  }
+  return out;
 }
 
 function hexToRgb(hex: string): [number, number, number] {

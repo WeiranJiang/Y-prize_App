@@ -3,7 +3,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Card, DemoBadge, IconButton, KV, Screen, Section, StatusDot, T } from '../components/ui';
 import { analyzeScan, confidenceOf, siteTitle } from '../domain/analysis';
-import { BIOMARKERS, formatValue } from '../domain/biomarkers';
+import { BIOMARKERS, formatValue, unitSuffix } from '../domain/biomarkers';
 import { clarityOf, pct } from '../domain/fouling';
 import { useStore } from '../state/store';
 import { colors, space } from '../theme/tokens';
@@ -34,7 +34,7 @@ export default function ScanDetails() {
         <Card>
           <KV k="Sites analysed" v={`${a.usable} of ${a.total}`} />
           <KV k="Areas to review" v={`${a.reviewSites.length}`} />
-          <KV k="Strip" v={`${strip.id} · session ${scan.sessionIndex}${scan.baseline ? ' (baseline)' : ''}`} />
+          <KV k="Strip" v={`${strip.arch === 'upper' ? 'Upper' : 'Lower'} · ${strip.id} · session ${scan.sessionIndex}${scan.baseline ? ' (baseline)' : ''}`} />
           <KV k="Strip clarity" v={pct(clarityOf(scan))} />
           <KV k="Session wear" v={`${scan.sessionMinutes} min (demo protocol)`} />
           <KV k="Strip exposure" v={`${scan.exposureHours.toFixed(0)} h`} />
@@ -54,12 +54,12 @@ export default function ScanDetails() {
               <View key={r.site.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, borderTopWidth: i ? StyleSheet.hairlineWidth : 0, borderTopColor: colors.hairline }}>
                 <StatusDot status={r.status} />
                 <View style={{ flex: 1, marginLeft: 10 }}>
-                  <T v="small" style={{ color: colors.text }}>{r.site.id} · {t.number} {t.surface.toLowerCase()}{r.site.role === 'comparison' ? ' (comparison)' : ''}</T>
+                  <T v="small" style={{ color: colors.text }}>{r.site.id} · {BIOMARKERS[r.site.biomarker].shortName} · {t.number} {t.surface.toLowerCase()}{r.site.role === 'comparison' ? ' (comparison)' : ''}</T>
                   <T v="small" style={{ fontSize: 11 }}>
                     {r.reading.value == null ? 'Withheld: below signal floor' : `Quality ${confidenceOf(r.reading.quality).toLowerCase()} · SNR ${r.reading.snr.toFixed(0)}${r.reading.calibration === 'recalibrate' ? ' · recalibrate' : ''}`}
                   </T>
                 </View>
-                <T v="bodyStrong" style={{ fontVariant: ['tabular-nums'] }}>{formatValue(BIOMARKERS.pH, r.reading.value)}</T>
+                <T v="bodyStrong" style={{ fontVariant: ['tabular-nums'] }}>{formatValue(BIOMARKERS[r.site.biomarker], r.reading.value)}<T v="small">{unitSuffix(BIOMARKERS[r.site.biomarker])}</T></T>
               </View>
             );
           })}

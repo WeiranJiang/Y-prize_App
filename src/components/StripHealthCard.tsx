@@ -29,7 +29,7 @@ export default function StripHealthCard({ compact }: { compact?: boolean }) {
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Icon name="strip" size={18} color={colors.textSecondary} />
-          <T v="label">Sensing strip</T>
+          <T v="label">{h.strip.arch === 'upper' ? 'Upper' : 'Lower'} strip</T>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <StatusDot status={key} />

@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import React from 'react';
 import { View } from 'react-native';
 import { confidenceOf, readingStatus, siteSeries, siteTitle } from '../domain/analysis';
-import { BIOMARKERS, formatValue } from '../domain/biomarkers';
+import { BIOMARKERS, formatDelta, formatReading, formatValue, unitSuffix } from '../domain/biomarkers';
 import { useStore } from '../state/store';
 import { colors, space } from '../theme/tokens';
 import Sparkline from './charts/Sparkline';
@@ -50,7 +50,7 @@ export default function SiteDetail({ siteId, showExplore = true }: { siteId: str
           {r.reading.value != null ? (
             <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 4 }}>
               <T v="number" style={{ fontSize: 44 }}>{formatValue(b, r.reading.value)}</T>
-              <T v="small" style={{ marginLeft: 6 }}>± {r.reading.uncertainty.toFixed(1)}</T>
+              <T v="small" style={{ marginLeft: 6 }}>± {formatValue(b, r.reading.uncertainty)}{unitSuffix(b)}</T>
             </View>
           ) : (
             <T v="number" style={{ fontSize: 32, color: colors.textSecondary, marginTop: 4 }}>Not measured</T>
@@ -61,14 +61,14 @@ export default function SiteDetail({ siteId, showExplore = true }: { siteId: str
 
       {series.length > 1 ? (
         <View style={{ marginTop: space.lg }}>
-          <Sparkline points={series.map((p) => p.value)} bands={b.bands} height={44} />
+          <Sparkline accent={b.color} points={series.map((p) => p.value)} bands={b.bands} height={44} />
           <T v="small" style={{ fontSize: 11, marginTop: 4 }}>Last {series.length} scans · gaps are scans where this site was not usable</T>
         </View>
       ) : null}
 
       <Divider style={{ marginVertical: space.lg }} />
       <View style={{ flexDirection: 'row', gap: space.xl }}>
-        {!isComparison && ref?.reading.value != null ? (
+        {!isComparison && r.site.biomarker === 'pH' && ref?.reading.value != null ? (
           <View style={{ flex: 1 }}>
             <T v="label" style={{ fontSize: 10 }}>Comparison site</T>
             <T v="bodyStrong" style={{ marginTop: 4 }}>{formatValue(b, ref.reading.value)}</T>
@@ -78,7 +78,7 @@ export default function SiteDetail({ siteId, showExplore = true }: { siteId: str
           <T v="label" style={{ fontSize: 10 }}>Previous</T>
           <T v="bodyStrong" style={{ marginTop: 4 }}>
             {r.previous ? formatValue(b, r.previous.value) : '—'}
-            {r.change != null ? <T v="small">{`  ${r.change > 0 ? '+' : ''}${r.change.toFixed(1)}`}</T> : null}
+            {r.change != null ? <T v="small">{`  ${formatDelta(b, r.change)}`}</T> : null}
           </T>
         </View>
         <View style={{ flex: 1 }}>
@@ -100,8 +100,8 @@ export default function SiteDetail({ siteId, showExplore = true }: { siteId: str
         <>
           <Divider style={{ marginTop: space.lg }} />
           <OIR
-            observed={`pH ${formatValue(b, r.reading.value)} at readout${ref?.reading.value != null && !isComparison ? `, comparison site ${formatValue(b, ref.reading.value)}` : ''}.`}
-            interpreted={status === 'normal' ? 'Within the configured range at this location.' : 'Slightly more acidic than the configured range. A single mild reading is common after eating or drinking.'}
+            observed={`${formatReading(b, r.reading.value)} at readout${r.site.biomarker === 'pH' && ref?.reading.value != null && !isComparison ? `, comparison site ${formatValue(b, ref.reading.value)}` : ''}.`}
+            interpreted={status === 'normal' ? 'Within the configured range at this location.' : `Slightly ${b.concernWord} than the configured range. A single mild reading is common and often reflects a recent meal or drink.`}
             recommended={status === 'normal' ? 'No change suggested here.' : 'Keep cleaning this area as usual; the app will tell you if it recurs.'}
           />
         </>

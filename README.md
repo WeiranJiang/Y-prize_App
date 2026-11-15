@@ -15,13 +15,30 @@ npm run typecheck
 
 | Tab | What it does |
 |---|---|
-| **Home** | Interactive point-cloud retainer with localized pH regions, summary cards, strip health, insights, recommendations |
-| **Scan** | Prepare → wear timer → place in case → optical scan (beam sweep, staged progress) → results / retry |
-| **Explore** | Mode switch (pH active; lactate/calcium research, others planned), 3D tooth focus, arch map, tooth search (Universal/FDI), per-site detail, research view with sensor-level data |
-| **Trends** | Time/biomarker/location filters, per-site small multiples (never averaged), neighbouring-site comparison, persistent sites, reliability, link to 3D before/after compare |
-| **Profile** | Case & strip, numbering, consumer/research mode, protocol, configurable pH thresholds and strip limits |
+| **Home** | Upper/Lower toggle, biomarker filter, the interactive point-cloud retainer, one status line, dental-arch map, tooth search, insights and recommendations. Tapping a tooth (3D, arch map or search) opens the **magnifier**: a circular zoomed 3D view of that tooth with its readings. |
+| **Trends** | Pick a biomarker and tap a tooth to see its current readings and history; all-sites small multiples, neighbouring-site comparison, persistent findings, measurement reliability, before/after 3D compare |
+| **Overview** | Whole-mouth summary: share of readings in range, direction of travel, upper vs lower, a tile per biomarker, consistent vs watch list |
+| **Ask** | Chat assistant grounded in the user's own readings (on-device by default; optional Claude backend, see below) |
+| **Strips** | Strips in use, spares at home, automatic (subscription) or manual reordering, order history (demo, no payments) |
 
-Other routes: `/strip` (strip health), `/compare`, `/scan-details`, `/about`.
+Other routes: `/scan` (tap the case chip on Home), `/profile` (icon on Home), `/strip` (strip health), `/compare`, `/scan-details`, `/about`.
+
+## Ask: optional Claude backend
+
+The Ask tab answers on-device from the app's own rules and data. To use Claude instead, run the small server in `server/` and point the app at it. The API key stays on the server, never in the app:
+
+```bash
+cd server && npm install && ANTHROPIC_API_KEY=... npm start
+EXPO_PUBLIC_CHAT_URL=http://<host>:8787/chat npx expo start
+```
+
+The app sends the question, recent turns and a compact, de-identified summary of the readings. The server calls `claude-opus-5-5` at low effort, with server-side refusal fallback enabled. If the server can't be reached, the app falls back to the on-device assistant.
+
+## Arches and biomarkers
+
+Both upper and lower retainers carry a strip (28 and 15 sensing sites in the demo). The Upper/Lower toggle is global: every screen follows it, and one case readout scans both strips.
+
+Each biomarker has its own colour on the 3D map: pH orange-red, lactate amber, calcium blue, phosphate teal, fluoride orchid, ammonium rose. **Only readings that need attention are coloured**, deeper colour meaning more concern. In-range sites stay plain white dots. Withheld readings get a faint slate ring, so "not measured" is never mistaken for "healthy". With six hues, colour alone can't separate every pair for colour-blind viewers, so identity is always backed by a name: the legend, the per-biomarker filter and the tap label.
 
 ## Biofouling & strip replacement (`src/domain/fouling.ts`)
 

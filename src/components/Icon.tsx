@@ -4,7 +4,7 @@ import { colors } from '../theme/tokens';
 
 export type IconName =
   | 'home' | 'scan' | 'explore' | 'trends' | 'profile' | 'case' | 'chevron' | 'chevronLeft' | 'close'
-  | 'info' | 'strip' | 'check' | 'alert' | 'refresh' | 'search' | 'drop' | 'spark' | 'layers' | 'clock' | 'compare';
+  | 'info' | 'strip' | 'check' | 'alert' | 'refresh' | 'search' | 'drop' | 'spark' | 'layers' | 'clock' | 'compare' | 'chat' | 'box' | 'pulse' | 'send' | 'zoom';
 
 export default function Icon({ name, size = 22, color = colors.text, strokeWidth = 1.4 }: { name: IconName; size?: number; color?: string; strokeWidth?: number }) {
   const p = { stroke: color, strokeWidth, fill: 'none', strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
@@ -82,6 +82,16 @@ export default function Icon({ name, size = 22, color = colors.text, strokeWidth
         </>
       )}
       {name === 'compare' && <Path d="M12 3.5v17M5 7h4v10H5zM15 7h4v10h-4z" {...p} />}
+      {name === 'chat' && <Path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v8.5A1.5 1.5 0 0 1 19 17h-7l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 5 5.5z" {...p} />}
+      {name === 'box' && <Path d="M3.5 7.5 12 3.5l8.5 4v9L12 20.5l-8.5-4zM3.5 7.5 12 11.5l8.5-4M12 11.5v9" {...p} />}
+      {name === 'pulse' && <Path d="M3.5 12h4l2-5 4 10 2-5h5" {...p} />}
+      {name === 'send' && <Path d="M4 12 20 4.5 15.5 20l-3-6.5zM12.5 13.5 20 4.5" {...p} />}
+      {name === 'zoom' && (
+        <>
+          <Circle cx="10.5" cy="10.5" r="6" {...p} />
+          <Path d="M15 15l5 5M10.5 8v5M8 10.5h5" {...p} />
+        </>
+      )}
     </Svg>
   );
 }
