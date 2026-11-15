@@ -1,4 +1,4 @@
-# SPOT — localized oral health monitoring (prototype)
+brew install node# SPOT — localized oral health monitoring (prototype)
 
 Mobile app for the SPOT (Submillimeter Polymer Optical Transmitter) system: a sensing strip in a clear retainer, an optical scanning case, and this app. Built with Expo (SDK 58) + Expo Router + expo-gl/three.js. **All data is simulated demo data.**
 
