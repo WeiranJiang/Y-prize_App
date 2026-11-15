@@ -32,7 +32,7 @@ cd server && npm install && ANTHROPIC_API_KEY=... npm start
 EXPO_PUBLIC_CHAT_URL=http://<host>:8787/chat npx expo start
 ```
 
-The app sends the question, recent turns and a compact, de-identified summary of the readings. The server calls `claude-opus-5-5` at low effort, with server-side refusal fallback enabled. If the server can't be reached, the app falls back to the on-device assistant.
+The app sends the question, recent turns and a compact, de-identified summary of the readings. The server calls `claude-opus-5-5` at low effort with a bounded output budget. If the server can't be reached, the app falls back to the on-device assistant.
 
 ## Design system (`src/theme/tokens.ts`, `src/components/ui.tsx`)
 
@@ -67,3 +67,13 @@ Rule-based (R1–R8). Each insight records its rule, biomarker, sites, threshold
 ## Extending to new biomarkers
 
 Add or enable an entry in `src/domain/biomarkers.ts` (units, bands, limitation text) and list it in a strip's `supported` array. Modes, legends, trends and rules key off the registry. aMMP-8 is intentionally excluded.
+
+### Ask security and deployment
+
+The assistant answers general questions and uses supplied demo readings for personal insights. Offline answers are a limited rule-based guide. Questions are limited to 2,000 characters; server requests to 32 KiB and 10 history turns. Live requests time out, and failures clearly switch to the offline guide.
+
+The backend allows 10 requests/minute and 100/day per socket IP, 1,000/day globally, and 5 concurrent requests. Rejected requests return HTTP 429 and `Retry-After`. Limits are in memory and reset on restart. Multiple replicas require a shared gateway/Redis limiter. Behind a reverse proxy all users share the proxy IP unless the gateway enforces trusted per-user limits; arbitrary forwarded headers are intentionally ignored. The client also limits rapid submissions, but the server is the enforcement boundary.
+
+Set `CHAT_ALLOWED_ORIGINS` to a comma-separated list of exact web origins (e.g. `https://spot.example.com`). Browser origins are denied by default; native clients do not send Origin. CORS is not authentication: this prototype has no user accounts. Before exposing private user records or running a public paid service, add verified user authentication and shared per-user quotas at your gateway. Do not put shared backend secrets in `EXPO_PUBLIC_*` variables. Use HTTPS for deployment; HTTP is allowed in development only. Health questions and summaries are sent to the model provider when live chat is configured; avoid entering identifying details. Request bodies and upstream errors are not logged by this server. Keep proxy access logs free of bodies and enforce request-size/time limits there too.
+
+Server checks: `cd server && npm run typecheck && npx tsx --test security.test.ts`.

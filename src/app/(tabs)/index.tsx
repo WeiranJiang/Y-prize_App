@@ -111,7 +111,7 @@ export default function Home() {
         {/* Tooth map */}
         <Section title="Tooth map" action={<ArchToggle onChange={() => setLoupe(null)} />}>
           <View style={styles.mapCard}>
-            <View style={{ height: Math.max(260, H * 0.34) }}>
+            <View style={{ height: Math.max(360, H * 0.44) }}>
               <RetainerView key={arch} arch={arch} style={{ flex: 1 }} regions={regions} reveal selectedTooth={loupe} onSelect={onSelect} active={focused && loupe == null} />
               <View pointerEvents="none" style={styles.hint}>
                 <Icon name="zoom" size={12} color={colors.textMuted} />

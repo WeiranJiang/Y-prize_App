@@ -24,12 +24,24 @@ export default function ArchDiagram({
   const frames = archFrames(arch).filter((f) => f.tooth.position <= 7);
   // Upper: anterior at the top (as on a dental chart). Lower: anterior at the bottom.
   const flip = arch === 'lower';
-  const H = 190;
-  // Model x ∈ [-40, 40], z ∈ [-26, 22] → screen. Anterior at the top (as on a dental chart).
-  const s = Math.min((w - 20) / 84, (H - 20) / 52);
+  const H = Math.max(260, Math.min(340, w * 0.85));
+  // Fit the actual crowns rather than assumed arch dimensions. Leave room
+  // outside every crown for tooth numbers, strokes and the card border.
+  const bounds = frames.map(f => {
+    const c = crownFor(arch, f.tooth.position);
+    const radius = Math.max(c.w * 0.46, c.b * 0.425);
+    return { x: f.center[0], z: f.center[2], radius };
+  });
+  const minX = Math.min(...bounds.map(b => b.x - b.radius));
+  const maxX = Math.max(...bounds.map(b => b.x + b.radius));
+  const minZ = Math.min(...bounds.map(b => b.z - b.radius));
+  const maxZ = Math.max(...bounds.map(b => b.z + b.radius));
+  const padding = 28;
+  const s = Math.max(0, Math.min((w - padding * 2) / (maxX - minX), (H - padding * 2) / (maxZ - minZ)));
   const cx = w / 2;
-  const toX = (x: number) => cx + x * s;
-  const toY = (z: number) => (flip ? H - 34 - (22 - z) * s : 14 + (22 - z) * s);
+  const midZ = (minZ + maxZ) / 2;
+  const toX = (x: number) => cx + (x - (minX + maxX) / 2) * s;
+  const toY = (z: number) => H / 2 + (flip ? 1 : -1) * (z - midZ) * s;
 
   return (
     <View style={{ height: H }} onLayout={(e) => setW(e.nativeEvent.layout.width)}>

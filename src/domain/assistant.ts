@@ -68,6 +68,12 @@ export function answerLocally(question: string, ctx: AssistantContext): Reply {
   const q = question.toLowerCase().trim();
   const n = ctx.numbering;
 
+  if (/\b(trouble breathing|difficulty breathing|trouble swallowing)\b/.test(q) || /swelling/.test(q) && /fever/.test(q)) {
+    return { text: 'Trouble breathing or swallowing, or facial swelling with fever, needs urgent medical care. Seek emergency help now; don’t wait for a scan.' };
+  }
+  if (/\b(change|changed|trend|history)\b/.test(q)) {
+    return { text: 'Open Trends and select the tooth and biomarker to compare readings over time. A single reading can shift with meals, timing and strip clarity; a repeated pattern is more useful. I don’t have the full tooth-level history in this offline conversation.', suggestions: ['How are my teeth overall?'] };
+  }
   // Symptoms always come first.
   if (/\b(pain|hurt|hurts|ache|bleed|bleeding|swollen|swelling|sensitive|sensitivity|broken|chipped)\b/.test(q)) {
     return {
@@ -79,7 +85,7 @@ export function answerLocally(question: string, ctx: AssistantContext): Reply {
   if (/\b(cavity|cavities|decay|caries|gum disease|gingivitis|diagnos)/.test(q)) {
     const c = concerns(ctx, 'pH');
     return {
-      text: `I can’t diagnose cavities or gum disease. These readings are research indicators. What I can say: ${c.length ? `${c.length} site${c.length > 1 ? 's' : ''} read more acidic than the configured range at your last scan, which is worth keeping clean and mentioning to your dentist.` : 'no site is currently below the acidity threshold.'}`,
+      text: `I can’t diagnose cavities or gum disease. These readings are research indicators. What I can say: ${c.length ? `${c.length} site${c.length > 1 ? 's' : ''} read more acidic than the configured range at your last scan, which is worth keeping clean and mentioning to your dentist.` : 'the available demo readings don’t show a site below the acidity threshold. Unmeasured sites and symptoms still need a dental assessment.'}`,
       suggestions: ['Which teeth need attention?', 'What should I tell my dentist?'],
     };
   }
@@ -122,7 +128,7 @@ export function answerLocally(question: string, ctx: AssistantContext): Reply {
     if (!rows.length) return { text: `${t.name} (${toothNumber(t, n)}) has no sensor, so I don’t have readings for it. Nearby readings aren’t estimated.` };
     const worst = rows.sort((a, b) => STATUS_RANK[b.status] - STATUS_RANK[a.status]);
     const bad = worst.filter((r) => STATUS_RANK[r.status] >= 1);
-    const tip = bad.length ? ` ${COPY[bad[0].site.biomarker].advice(bad[0].site.surface === 'mesial' || bad[0].site.surface === 'distal')}` : ' Everything here is in range.';
+    const tip = bad.length ? ` ${COPY[bad[0].site.biomarker].advice(bad[0].site.surface === 'mesial' || bad[0].site.surface === 'distal')}` : ' Available readings here are in range; missing measurements can’t tell us whether a tooth is healthy.';
     return {
       text: `${t.name} (${toothNumber(t, n)}):\n${worst.slice(0, 5).map((r) => `• ${describeSite(r, n)}`).join('\n')}\n${tip.trim()}`,
       suggestions: ['How has it changed?', 'What should I do this week?'],
@@ -168,12 +174,16 @@ export function answerLocally(question: string, ctx: AssistantContext): Reply {
     };
   }
 
+  if (/\b(brush|brushing|floss|clean between|toothpaste)\b/.test(q)) {
+    return { text: 'Brush gently twice a day for two minutes with fluoride toothpaste, and clean between your teeth daily with floss or an interdental brush that fits comfortably. Spit out toothpaste afterward rather than rinsing it straight away. If cleaning causes persistent bleeding or pain, ask your dentist to check the area and your technique.' };
+  }
+
   if (/^(hi|hey|hello|yo)\b/.test(q) || /\bwhat can you\b/.test(q)) {
     return { text: 'Hi! Ask me about your teeth, a specific tooth, any biomarker (pH, lactate, calcium, phosphate, fluoride, ammonium) or your strips.', suggestions: SUGGEST };
   }
 
   return {
-    text: 'I can answer questions about your readings, a specific tooth, any of the six biomarkers, recommendations, and your strips.',
+    text: 'The offline guide doesn’t have a reliable answer to that question yet. I can help interpret a specific reading, explain strip replacement, or suggest an oral-care routine. For a change over time, open Trends and select the tooth and biomarker you want to compare.',
     suggestions: SUGGEST,
   };
 }
@@ -181,6 +191,11 @@ export function answerLocally(question: string, ctx: AssistantContext): Reply {
 /** Compact, de-identified summary sent to the optional server. */
 export function contextSummary(ctx: AssistantContext) {
   return {
+    data_source: 'simulated demo readings',
+    numbering: ctx.numbering,
+    supply: ctx.supply,
+    reorder_mode: ctx.planMode,
+    sites: ctx.arches.flatMap(a => (a.analysis?.results ?? []).map(r => ({ arch: a.arch, reading: describeSite(r, ctx.numbering) }))),
     overall_in_range: ctx.overview.overall,
     direction: ctx.overview.direction,
     by_arch: ctx.overview.byArch,
@@ -193,20 +208,34 @@ export function contextSummary(ctx: AssistantContext) {
 
 export async function ask(question: string, history: { role: 'user' | 'assistant'; text: string }[], ctx: AssistantContext): Promise<Reply> {
   const url = process.env.EXPO_PUBLIC_CHAT_URL;
+  if (!question.trim() || question.length > 2000) return { text: 'Please enter a question of up to 2,000 characters.' };
   if (url) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
     try {
+      const endpoint = new URL(url);
+      if (endpoint.protocol !== 'https:' && !(__DEV__ && endpoint.protocol === 'http:')) throw new Error('HTTPS required');
       const res = await fetch(url, {
         method: 'POST',
+        signal: controller.signal,
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ question, history: history.slice(-10), context: contextSummary(ctx) }),
+        body: JSON.stringify({ question, history: history.slice(-10).map(t => ({ role: t.role, text: t.text.slice(0, 4000) })), context: contextSummary(ctx) }),
       });
+      if (res.status === 429) {
+        const retry = Number(res.headers.get('retry-after'));
+        return { text: `You’ve reached the Ask limit for now. Please try again in ${Number.isFinite(retry) && retry > 0 ? `${Math.ceil(retry / 60)} minute(s)` : 'a little while'}.` };
+      }
       if (res.ok) {
         const data = (await res.json()) as { reply?: string };
-        if (data.reply) return { text: data.reply };
+        if (typeof data.reply === 'string' && data.reply.trim()) return { text: data.reply };
       }
     } catch {
       // Fall back to the on-device assistant.
+    } finally {
+      clearTimeout(timeout);
     }
+    const local = answerLocally(question, ctx);
+    return { ...local, text: `Live answers are unavailable, so here’s the offline guide using your demo readings.\n\n${local.text}` };
   }
   return answerLocally(question, ctx);
 }

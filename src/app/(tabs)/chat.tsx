@@ -20,7 +20,7 @@ interface Msg {
 const START: Msg = {
   id: 0,
   role: 'assistant',
-  text: 'Hi, I can answer questions about your teeth, any biomarker, or your strips, using your latest scans.',
+  text: 'Hi! What would you like to understand about your oral health? We can look at your readings, talk through a routine, or check when your strips need replacing. The readings here are simulated demo data.',
   suggestions: ['How are my teeth overall?', 'Which teeth need attention?', 'What should I do this week?', 'When should I replace my strips?'],
 };
 
@@ -31,6 +31,8 @@ export default function Chat() {
   const [msgs, setMsgs] = useState<Msg[]>([START]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
+  const sending = useRef(false);
+  const sentAt = useRef<number[]>([]);
   const scroll = useRef<ScrollViewInstance>(null);
 
   const ctx: AssistantContext = useMemo(() => {
@@ -55,15 +57,29 @@ export default function Chat() {
 
   const send = async (q: string) => {
     const question = q.trim();
-    if (!question || busy) return;
+    if (!question || sending.current) return;
+    const now = Date.now();
+    sentAt.current = sentAt.current.filter(t => now - t < 60000);
+    if (sentAt.current.length >= 10) {
+      setMsgs(m => [...m, { id: now, role: 'assistant', text: 'You’ve sent 10 questions in a minute. Give it a moment, then try again.' }]);
+      return;
+    }
+    sentAt.current.push(now);
+    sending.current = true;
     setText('');
     const userMsg: Msg = { id: Date.now(), role: 'user', text: question };
     setMsgs((m) => [...m, userMsg]);
     setBusy(true);
     const history = msgs.map((m) => ({ role: m.role, text: m.text }));
+    try {
     const reply: Reply = await ask(question, history, ctx);
     setMsgs((m) => [...m, { id: Date.now() + 1, role: 'assistant', text: reply.text, suggestions: reply.suggestions }]);
-    setBusy(false);
+    } catch {
+      setMsgs(m => [...m, { id: Date.now() + 1, role: 'assistant', text: 'I couldn’t finish that answer. Please try again.' }]);
+    } finally {
+      sending.current = false;
+      setBusy(false);
+    }
     setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 50);
   };
 
@@ -73,7 +89,7 @@ export default function Chat() {
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={{ paddingTop: insets.top + space.md, paddingHorizontal: space.lg }}>
         <T v="display">Ask</T>
-        <T v="small" style={{ marginTop: 2 }}>Answers come from your own readings. Not medical advice.</T>
+        <T v="small" style={{ marginTop: 2 }}>Demo readings + general guidance. Not a diagnosis.</T>
       </View>
 
       <ScrollView ref={scroll} style={{ flex: 1 }} contentContainerStyle={{ padding: space.xl, paddingBottom: 24 }} onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}>
@@ -100,6 +116,7 @@ export default function Chat() {
 
       <View style={[styles.inputBar, { marginBottom: 76 + insets.bottom }]}>
         <TextInput
+          maxLength={2000}
           value={text}
           onChangeText={setText}
           placeholder="Ask about your teeth…"
@@ -108,7 +125,7 @@ export default function Chat() {
           onSubmitEditing={() => send(text)}
           returnKeyType="send"
         />
-        <Pressable onPress={() => send(text)} style={[styles.send, !text.trim() && { opacity: 0.4 }]} disabled={!text.trim()} accessibilityLabel="Send">
+        <Pressable onPress={() => send(text)} style={[styles.send, !text.trim() && { opacity: 0.4 }]} disabled={busy || !text.trim()} accessibilityLabel="Send">
           <Icon name="send" size={18} color={colors.textOnLight} />
         </Pressable>
       </View>
