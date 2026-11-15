@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import BottomSheet from '../components/BottomSheet';
 import LineChart from '../components/charts/LineChart';
 import { replaceEta } from '../components/StripHealthCard';
+import ArchToggle from '../components/ArchToggle';
 import { Button, Card, DemoBadge, Divider, IconButton, KV, Legend, Meter, Screen, Section, StatusDot, T } from '../components/ui';
 import { siteTitle } from '../domain/analysis';
 import { Status } from '../domain/biomarkers';
@@ -27,7 +28,7 @@ export default function StripHealth() {
   const previous = useMemo(
     () =>
       state.strips
-        .filter((s) => s.id !== strip.id)
+        .filter((s) => s.id !== strip.id && s.arch === strip.arch)
         .map((s) => ({ s, h: computeStripHealth(s, state.scans, L, s.retiredAt ? new Date(s.retiredAt) : new Date()) }))
         .reverse(),
     [state.strips, state.scans, strip.id, L],
@@ -39,7 +40,7 @@ export default function StripHealth() {
   const projection = h.forecast?.projection.map((p) => ({ x: p.exposureHours, y: p.clarity })) ?? [];
   const xMax = Math.max(...points.map((p) => p.x), ...projection.map((p) => p.x), 24);
 
-  const sites = h.siteSignals.slice().sort((a, b) => a.transmission - b.transmission);
+  const sites = h.siteSignals.slice().sort((a, b) => a.transmission - b.transmission).slice(0, 10);
   const constraintLabel = { clarity: 'Optical clarity', signal: 'Local signal loss', days: 'Use period', sessions: 'Session count' } as const;
 
   return (
@@ -50,7 +51,8 @@ export default function StripHealth() {
           <DemoBadge />
         </View>
         <View style={{ paddingHorizontal: space.xl, marginTop: space.lg }}>
-          <T v="label">Sensing strip · {strip.batch}</T>
+          <ArchToggle />
+          <T v="label" style={{ marginTop: space.lg }}>{strip.arch === 'upper' ? 'Upper' : 'Lower'} sensing strip · {strip.batch}</T>
           <T v="display" style={{ marginTop: 6 }}>{h.headline}</T>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: space.sm }}>
             <StatusDot status={key} />
@@ -142,13 +144,12 @@ export default function StripHealth() {
         <Section title="Where film is building">
           <Card style={{ paddingHorizontal: 0, paddingBottom: space.md }}>
             <View style={{ height: 260 }}>
-              {latest ? <RetainerView style={{ flex: 1 }} regions={regions} active={focused} zoom={1.05} /> : null}
+              {latest ? <RetainerView key={strip.arch} arch={strip.arch} style={{ flex: 1 }} regions={regions} active={focused} zoom={1.05} /> : null}
             </View>
             <Legend
               showUnmeasured={false}
-              title="Signal"
+              title="Signal · clear areas stay white"
               items={[
-                { status: 'normal', label: '≥80%' },
                 { status: 'mild', label: '70–80%' },
                 { status: 'elevated', label: '<70%' },
                 { status: 'high', label: 'Below floor' },

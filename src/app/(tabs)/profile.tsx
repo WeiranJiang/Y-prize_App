@@ -18,7 +18,7 @@ function Step({ label, value, onMinus, onPlus }: { label: string; value: string;
 }
 
 export default function Profile() {
-  const { state, dispatch, strip } = useStore();
+  const { state, dispatch, stripFor, setArch } = useStore();
   const s = state.settings;
   const L = s.limits;
   const B = s.pHBands;
@@ -32,7 +32,7 @@ export default function Profile() {
       <View style={{ paddingHorizontal: space.xl, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <View>
           <T v="display" style={{ fontSize: 30 }}>Profile</T>
-          <T v="small" style={{ marginTop: 2 }}>Alex · Upper retainer</T>
+          <T v="small" style={{ marginTop: 2 }}>Alex · Upper and lower retainers</T>
         </View>
         <DemoBadge />
       </View>
@@ -40,8 +40,15 @@ export default function Profile() {
       <Section title="Devices">
         <Card style={{ paddingVertical: 4 }}>
           <Row label="Scanning case" sub={`${state.caseStatus[0].toUpperCase()}${state.caseStatus.slice(1)} · firmware 0.9.4 (demo)`} value={`${Math.round(state.caseBattery * 100)}%`} />
-          <Divider />
-          <Row label="Sensing strip" sub={`${strip.id} · batch ${strip.batch} · ${strip.calibrationVersion}`} value="No battery" onPress={() => router.push('/strip')} />
+          {(['upper', 'lower'] as const).map((a) => {
+            const st = stripFor(a);
+            return (
+              <React.Fragment key={a}>
+                <Divider />
+                <Row label={`${a === 'upper' ? 'Upper' : 'Lower'} sensing strip`} sub={`${st.id} · batch ${st.batch} · ${st.calibrationVersion} · 6 biomarkers`} value="No battery" onPress={() => { setArch(a); router.push('/strip'); }} />
+              </React.Fragment>
+            );
+          })}
         </Card>
         <View style={{ marginTop: space.md }}>
           <StripHealthCard compact />

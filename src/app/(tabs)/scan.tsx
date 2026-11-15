@@ -6,7 +6,9 @@ import Svg, { Circle } from 'react-native-svg';
 import CaseIllustration from '../../components/CaseIllustration';
 import Icon from '../../components/Icon';
 import { replaceEta } from '../../components/StripHealthCard';
-import { Button, Card, DemoBadge, Divider, Legend, Screen, StatusDot, T } from '../../components/ui';
+import ArchToggle from '../../components/ArchToggle';
+import BiomarkerLegend from '../../components/BiomarkerLegend';
+import { Button, Card, DemoBadge, Divider, Screen, StatusDot, T } from '../../components/ui';
 import { pct } from '../../domain/fouling';
 import { useStore } from '../../state/store';
 import RetainerView from '../../three/RetainerView';
@@ -163,7 +165,7 @@ export default function Scan() {
           </Card>
 
           <View style={{ marginTop: space.xl }}>
-            {['Sensing strip attached', 'Retainer seated correctly'].map((label, i) => (
+            {['Sensing strips attached (upper and lower)', 'Retainers seated correctly'].map((label, i) => (
               <Pressable key={label} onPress={() => { haptic(); setChecks((c) => c.map((v, j) => (j === i ? !v : v))); }} style={styles.check}>
                 <View style={[styles.box, checks[i] && { backgroundColor: colors.ivory, borderColor: colors.ivory }]}>
                   {checks[i] ? <Icon name="check" size={14} color={colors.textOnLight} strokeWidth={2} /> : null}
@@ -176,7 +178,7 @@ export default function Scan() {
                 {withinUse ? <Icon name="check" size={14} color={colors.textOnLight} strokeWidth={2} /> : <Icon name="close" size={12} color={colors.high} strokeWidth={2} />}
               </View>
               <View style={{ flex: 1 }}>
-                <T v="bodyStrong" style={{ fontSize: 15 }}>Strip within its validated use period</T>
+                <T v="bodyStrong" style={{ fontSize: 15 }}>{store.arch === 'upper' ? 'Upper' : 'Lower'} strip within its validated use period</T>
                 <T v="small">
                   Day {Math.floor(health.daysInUse) + 1} of {health.limits.maxDays} · clarity {health.clarity != null ? pct(health.clarity) : '—'} · replace in {replaceEta(health).toLowerCase()}
                 </T>
@@ -257,7 +259,7 @@ export default function Scan() {
       {step === 'scanning' && (
         <View style={styles.body}>
           <View style={{ height: 300, marginHorizontal: -space.xl }}>
-            <RetainerView style={{ flex: 1 }} regions={regions} scan={scanAnim} interactive={false} autoRotate={false} active={focused} zoom={0.92} />
+            <RetainerView key={store.arch} arch={store.arch} style={{ flex: 1 }} regions={regions} scan={scanAnim} interactive={false} autoRotate={false} active={focused} zoom={0.92} />
           </View>
           <T v="title" style={{ textAlign: 'center' }}>{stage >= 0 && stage < STAGES.length ? STAGES[stage].label : stage >= STAGES.length ? 'Scan complete' : 'Starting'}</T>
           <View style={{ height: 2, backgroundColor: colors.hairline, borderRadius: 1, marginTop: space.lg, overflow: 'hidden' }}>
@@ -286,9 +288,12 @@ export default function Scan() {
       {step === 'results' && a && (
         <View style={styles.body}>
           <View style={{ height: 300, marginHorizontal: -space.xl }}>
-            <RetainerView style={{ flex: 1 }} regions={regions} reveal active={focused} />
+            <RetainerView key={store.arch} arch={store.arch} style={{ flex: 1 }} regions={regions} reveal active={focused} />
           </View>
-          <Legend />
+          <View style={{ alignItems: 'center', marginBottom: space.sm }}>
+            <ArchToggle />
+          </View>
+          <BiomarkerLegend mode="overview" only={[...new Set((a.results ?? []).filter((r) => r.status !== 'normal' && r.status !== 'unavailable').map((r) => r.site.biomarker))]} />
           <T v="display" style={{ marginTop: space.xl }}>Your scan is ready</T>
           <View style={{ marginTop: space.lg }}>
             <ResultLine icon={a.reviewSites.length ? 'alert' : 'check'} text={`${a.reviewSites.length} ${a.reviewSites.length === 1 ? 'area' : 'areas'} to review`} />
@@ -296,7 +301,8 @@ export default function Scan() {
             {a.withheld.length ? <ResultLine icon="info" text={`${a.withheld.length} site${a.withheld.length > 1 ? 's' : ''} withheld: signal below quality floor`} /> : null}
             {a.recalibrate.length ? <ResultLine icon="refresh" text={`${a.recalibrate.length} sensor${a.recalibrate.length > 1 ? 's' : ''} require${a.recalibrate.length > 1 ? '' : 's'} recalibration`} /> : null}
             {a.readoutLate ? <ResultLine icon="clock" text="Read after the readout window: lower confidence" /> : null}
-            <ResultLine icon="strip" text={`Strip clarity ${health.clarity != null ? pct(health.clarity) : '—'} · replace in ${replaceEta(health).toLowerCase()}`} />
+            <ResultLine icon="strip" text={`${store.arch === 'upper' ? 'Upper' : 'Lower'} strip clarity ${health.clarity != null ? pct(health.clarity) : '—'} · replace in ${replaceEta(health).toLowerCase()}`} />
+            <ResultLine icon="layers" text="Both retainers were read; switch above to see the other arch" />
           </View>
           <Button label="Explore results" style={{ marginTop: space.xl }} onPress={() => { restart(); router.navigate('/explore'); }} />
           <Button label="View scan details" kind="secondary" style={{ marginTop: space.md }} onPress={() => latest && router.push({ pathname: '/scan-details', params: { id: latest.id } })} />

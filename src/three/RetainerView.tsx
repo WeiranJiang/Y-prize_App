@@ -10,6 +10,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, GestureResponderEvent, LayoutChangeEvent, PanResponder, Platform, StyleProp, View, ViewStyle } from 'react-native';
 import * as THREE from 'three';
 import { frameFor } from '../domain/arch';
+import type { Arch } from '../domain/teeth';
 import { buildRetainerCloud, buildTrayCloud, PointCloud } from './retainerGeometry';
 import { paintCloud, Region } from './regions';
 
@@ -36,6 +37,8 @@ export interface Selection {
 }
 
 interface Props {
+  /** Which retainer to draw. Changing it requires a remount (use `key={arch}`). */
+  arch?: Arch;
   regions: Region[];
   style?: StyleProp<ViewStyle>;
   selectedTooth?: number | null;
@@ -59,10 +62,10 @@ interface Props {
   zoom?: number;
 }
 
-let CLOUD: PointCloud | null = null;
-let TRAY: Float32Array | null = null;
-const getCloud = () => (CLOUD ??= buildRetainerCloud());
-const getTray = () => (TRAY ??= buildTrayCloud());
+const CLOUDS: Partial<Record<Arch, PointCloud>> = {};
+const TRAYS: Partial<Record<Arch, Float32Array>> = {};
+const getCloud = (a: Arch) => (CLOUDS[a] ??= buildRetainerCloud(a));
+const getTray = (a: Arch) => (TRAYS[a] ??= buildTrayCloud(a));
 
 const VERT = /* glsl */ `
 attribute vec3 aColor;
@@ -94,7 +97,7 @@ void main() {
   float light = 0.5 + 0.38 * diff + 0.32 * rim;
   float depth = -mv.z;
   float fog = clamp(1.0 - (depth - uNear) / (uFar - uNear), 0.28, 1.0);
-  vec3 neutral = vec3(0.86, 0.89, 0.95);
+  vec3 neutral = vec3(0.93, 0.95, 0.99);
   vec3 col = mix(neutral, aColor, uColorAmt);
   float colored = step(0.0, aRegion) * uColorAmt;
   float a = light * fog;
@@ -173,7 +176,7 @@ const ease = (t: number) => 1 - Math.pow(1 - t, 3);
 export default function RetainerView(props: Props) {
   const p = useRef(props);
   p.current = props;
-  const cloud = useMemo(getCloud, []);
+  const cloud = useMemo(() => getCloud(props.arch ?? 'upper'), [props.arch]);
   const cam = useRef<CameraState>(props.sharedCamera ?? makeCamera());
   if (props.sharedCamera) cam.current = props.sharedCamera;
   const layout = useRef({ w: 1, h: 1 });
@@ -433,7 +436,7 @@ export default function RetainerView(props: Props) {
     group.add(new THREE.Points(geo, mat));
 
     const trayGeo = new THREE.BufferGeometry();
-    trayGeo.setAttribute('position', new THREE.BufferAttribute(getTray(), 3));
+    trayGeo.setAttribute('position', new THREE.BufferAttribute(getTray(p.current.arch ?? 'upper'), 3));
     const trayUniforms = { uScale: uniforms.uScale, uBeamX: uniforms.uBeamX };
     const tray = new THREE.Points(
       trayGeo,

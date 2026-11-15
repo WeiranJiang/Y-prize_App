@@ -117,6 +117,8 @@ export function analyzeScan(scan: Scan, strip: Strip, history: Scan[]): ScanAnal
 export function siteSeries(siteId: string, scans: Scan[], biomarker: BiomarkerId = 'pH') {
   return scans
     .slice()
+    // Only scans whose strip carries this site; a withheld reading (value null) stays as a gap.
+    .filter((s) => s.readings.some((x) => x.siteId === siteId && x.biomarker === biomarker))
     .sort((a, b) => +new Date(a.at) - +new Date(b.at))
     .map((s) => {
       const r = s.readings.find((x) => x.siteId === siteId && x.biomarker === biomarker);

@@ -2,12 +2,13 @@ import { router, useIsFocused } from 'expo-router';
 import React, { useMemo, useRef, useState } from 'react';
 import { Animated, Dimensions, Pressable, ScrollView, View } from 'react-native';
 import BottomSheet from '../../components/BottomSheet';
+import ArchToggle from '../../components/ArchToggle';
 import CaseIndicator from '../../components/CaseIndicator';
 import FloatingLabel from '../../components/FloatingLabel';
 import Icon from '../../components/Icon';
 import SiteDetail from '../../components/SiteDetail';
 import StripHealthCard from '../../components/StripHealthCard';
-import { Card, DemoBadge, Legend, Screen, Section, StatusDot, T } from '../../components/ui';
+import { Card, Screen, Section, StatusDot, T } from '../../components/ui';
 import { readingStatus, siteTitle } from '../../domain/analysis';
 import { BIOMARKERS, formatValue } from '../../domain/biomarkers';
 import { pct } from '../../domain/fouling';
@@ -16,11 +17,6 @@ import { useStore } from '../../state/store';
 import RetainerView, { Selection } from '../../three/RetainerView';
 import { regionsForScan } from '../../three/regions';
 import { colors, space } from '../../theme/tokens';
-
-function greeting(d = new Date()) {
-  const h = d.getHours();
-  return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
-}
 
 export function scanTimeLabel(iso: string) {
   const d = new Date(iso);
@@ -37,8 +33,14 @@ export function InsightCard({ i, width }: { i: Insight; width?: number }) {
   return (
     <Card style={{ width, minHeight: 150 }} onPress={i.action ? () => router.push(i.action!.href as never) : undefined}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        {s ? <StatusDot status={s} /> : <Icon name="info" size={14} color={colors.textSecondary} />}
-        <T v="label" style={{ fontSize: 10 }}>{i.kind === 'finding' ? 'Finding' : i.kind === 'stable' ? 'Stable' : i.kind === 'strip' ? 'Strip' : i.kind === 'quality' ? 'Scan quality' : 'Routine'}</T>
+        {i.biomarker && i.kind === 'finding' ? (
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: BIOMARKERS[i.biomarker as keyof typeof BIOMARKERS].color }} />
+        ) : s ? (
+          <StatusDot status={s} />
+        ) : (
+          <Icon name="info" size={14} color={colors.textSecondary} />
+        )}
+        <T v="label" style={{ fontSize: 10 }}>{i.kind === 'finding' ? (i.biomarker ? BIOMARKERS[i.biomarker as keyof typeof BIOMARKERS].shortName : 'Finding') : i.kind === 'stable' ? 'Stable' : i.kind === 'strip' ? 'Strip' : i.kind === 'quality' ? 'Scan quality' : 'Routine'}</T>
       </View>
       <T v="bodyStrong" style={{ marginTop: space.md }}>{i.title}</T>
       <T v="small" style={{ marginTop: 6 }} numberOfLines={4}>{i.summary}</T>
@@ -48,9 +50,10 @@ export function InsightCard({ i, width }: { i: Insight; width?: number }) {
 }
 
 export default function Home() {
-  const { latestScan, stripById, analysis, insights, recommendations, state } = useStore();
+  const { latestScan, stripById, analysis, insights, recommendations, state, arch } = useStore();
   const focused = useIsFocused();
   const strip = latestScan ? stripById(latestScan.stripId) : undefined;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const regions = useMemo(() => regionsForScan(latestScan, strip, 'overview'), [latestScan, strip, state.rev]);
   const [sel, setSel] = useState<Selection | null>(null);
   const labelPos = useRef(new Animated.ValueXY({ x: -500, y: -500 })).current;
@@ -66,25 +69,23 @@ export default function Home() {
     setSel(s);
   };
 
-  const review = analysis?.reviewSites.length ?? 0;
-  const below = analysis?.belowThreshold.length ?? 0;
   const quality = analysis ? analysis.usable / analysis.total : 0;
   const top = insights.filter((i) => i.kind !== 'routine').slice(0, 5);
+  const selBm = selResult ? BIOMARKERS[selResult.site.biomarker] : null;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <Screen>
-        <View style={{ paddingHorizontal: space.xl, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-          <View style={{ flex: 1 }}>
-            <T v="display">{greeting()}</T>
-            <T v="body" style={{ marginTop: 4 }}>Here's your latest oral health snapshot.</T>
-          </View>
+        <View style={{ paddingHorizontal: space.xl, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <ArchToggle onChange={() => setSel(null)} />
           <CaseIndicator />
         </View>
 
         {/* Hero */}
-        <View style={{ height: Math.max(340, H * 0.5), marginTop: space.sm }}>
+        <View style={{ height: Math.max(330, H * 0.47), marginTop: space.sm }}>
           <RetainerView
+            key={arch}
+            arch={arch}
             style={{ flex: 1 }}
             regions={regions}
             reveal
@@ -95,44 +96,19 @@ export default function Home() {
             labelPos={labelPos}
             active={focused}
           />
-          {selResult ? (
+          {selResult && selBm ? (
             <FloatingLabel
               pos={labelPos}
               title={`${siteTitle(selResult.site, state.settings.numbering).number} · ${siteTitle(selResult.site).surface}`}
-              value={selResult.reading.value != null ? `pH ${formatValue(BIOMARKERS.pH, selResult.reading.value)}` : 'Not measured'}
+              value={selResult.reading.value != null ? `${selBm.shortName} ${formatValue(selBm, selResult.reading.value)} ${selBm.unit === 'pH' ? '' : selBm.unit}` : 'Not measured'}
               status={readingStatus(selResult.reading)}
             />
           ) : null}
-          {latestScan?.demo ? <DemoBadge style={{ position: 'absolute', left: space.xl, top: space.sm }} /> : null}
         </View>
 
-        <View style={{ alignItems: 'center', paddingHorizontal: space.xl }}>
-          <T v="heading">Your oral health map</T>
-          <T v="small" style={{ marginTop: 4 }}>{latestScan ? `Last scanned ${scanTimeLabel(latestScan.at)}` : 'No scans yet'}</T>
-          <T v="small" style={{ marginTop: 2, color: colors.textMuted, fontSize: 12 }}>Drag to explore your teeth · tap a coloured area</T>
-          <View style={{ marginTop: space.lg }}>
-            <Legend title="Local pH" />
-          </View>
-        </View>
-
-        {/* Summary */}
-        <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: space.xl, marginTop: space.xxl }}>
-          <Card style={{ flex: 1, padding: 14 }} onPress={() => router.navigate('/explore')}>
-            <T v="small" style={{ fontSize: 12 }}>To review</T>
-            <T v="number" style={{ marginTop: 6 }}>{review}</T>
-            <T v="small" style={{ fontSize: 11 }}>{review === 1 ? 'location' : 'locations'}</T>
-          </Card>
-          <Card style={{ flex: 1, padding: 14 }} onPress={() => router.navigate({ pathname: '/trends' })}>
-            <T v="small" style={{ fontSize: 12 }}>Acidity</T>
-            <T v="number" style={{ marginTop: 6 }}>{below}</T>
-            <T v="small" style={{ fontSize: 11 }}>{below === 1 ? 'site' : 'sites'} below pH {state.settings.pHBands.elevated.toFixed(1)}</T>
-          </Card>
-          <Card style={{ flex: 1, padding: 14 }} onPress={() => latestScan && router.push({ pathname: '/scan-details', params: { id: latestScan.id } })}>
-            <T v="small" style={{ fontSize: 12 }}>Scan quality</T>
-            <T v="number" style={{ marginTop: 6 }}>{pct(quality)}</T>
-            <T v="small" style={{ fontSize: 11 }}>usable readings</T>
-          </Card>
-        </View>
+        <T v="small" style={{ textAlign: 'center', paddingHorizontal: space.xl, color: colors.textSecondary }}>
+          {latestScan ? `Last scanned ${scanTimeLabel(latestScan.at)} · Scan quality ${pct(quality)}` : 'No scans yet'}
+        </T>
 
         <Section title="Strip health">
           <StripHealthCard compact />
@@ -164,7 +140,7 @@ export default function Home() {
           <Pressable onPress={() => router.push('/about')} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: space.lg }}>
             <Icon name="info" size={14} color={colors.textMuted} />
             <T v="small" style={{ color: colors.textMuted, fontSize: 12, flex: 1 }}>
-              Local pH is a research indicator and does not diagnose decay or gum disease. How findings are made →
+              pH, lactate, calcium, phosphate, fluoride and ammonium readings are research indicators and do not diagnose decay or gum disease. How findings are made →
             </T>
           </Pressable>
         </Section>

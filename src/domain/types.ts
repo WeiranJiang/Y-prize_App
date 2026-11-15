@@ -1,5 +1,6 @@
 import type { SurfaceId } from './arch';
 import type { BiomarkerId } from './biomarkers';
+import type { Arch } from './teeth';
 
 export type SiteRole = 'measure' | 'comparison';
 
@@ -14,6 +15,8 @@ export interface SensingSite {
   footprintMm: number;
   /** Transmitter ids grouped into this site (research mode). */
   transmitters: string[];
+  /** [mm along the arch, mm in height] from the surface anchor, so sensors can share a surface. */
+  offset?: [number, number];
 }
 
 /** Chemically inert optical spot used to separate fouling from chemistry. */
@@ -26,6 +29,7 @@ export interface ReferenceSpot {
 
 export interface Strip {
   id: string;
+  arch: Arch;
   batch: string;
   installedAt: string;
   retiredAt?: string;

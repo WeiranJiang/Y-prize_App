@@ -72,8 +72,9 @@ export const TEETH: Tooth[] = Array.from({ length: 32 }, (_, i) => build(i + 1))
 export const toothByUniversal = (u: number): Tooth => TEETH[u - 1];
 export const toothByFdi = (f: number): Tooth | undefined => TEETH.find((t) => t.fdi === f);
 
-/** Teeth covered by the demo upper retainer (second molar to second molar). */
-export const RETAINER_TEETH = TEETH.filter((t) => t.arch === 'upper' && t.position <= 7);
+/** Teeth covered by the demo retainers (second molar to second molar, both arches). */
+export const RETAINER_TEETH = TEETH.filter((t) => t.position <= 7);
+export const retainerTeeth = (arch: Arch) => RETAINER_TEETH.filter((t) => t.arch === arch);
 
 export function toothNumber(t: Tooth, system: NumberingSystem): string {
   return system === 'universal' ? `#${t.universal}` : `${t.fdi}`;

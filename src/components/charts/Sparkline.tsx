@@ -6,11 +6,14 @@ import { STATUS_HEX } from '../../three/regions';
 import { colors } from '../../theme/tokens';
 
 /** Compact single-series trend. Gaps (null) break the line and leave a hollow tick. */
-export default function Sparkline({ points, bands, height = 36, domain }: { points: (number | null)[]; bands?: Bands; height?: number; domain?: [number, number] }) {
+export default function Sparkline({ points, bands, height = 36, domain, accent }: { points: (number | null)[]; bands?: Bands; height?: number; domain?: [number, number]; accent?: string }) {
   const [w, setW] = useState(0);
   const vals = points.filter((v): v is number => v != null);
-  const lo = domain?.[0] ?? Math.min(...vals, bands ? bands.elevated : Infinity) - 0.2;
-  const hi = domain?.[1] ?? Math.max(...vals, bands ? bands.mild : -Infinity) + 0.2;
+  const rawLo = Math.min(...vals, bands ? Math.min(bands.elevated, bands.mild) : Infinity);
+  const rawHi = Math.max(...vals, bands ? Math.max(bands.elevated, bands.mild) : -Infinity);
+  const padV = (rawHi - rawLo || 1) * 0.12;
+  const lo = domain?.[0] ?? rawLo - padV;
+  const hi = domain?.[1] ?? rawHi + padV;
   const pad = 5;
   const x = (i: number) => pad + (i / Math.max(1, points.length - 1)) * (w - pad * 2);
   const y = (v: number) => pad + (1 - (v - lo) / (hi - lo || 1)) * (height - pad * 2);
@@ -38,7 +41,7 @@ export default function Sparkline({ points, bands, height = 36, domain }: { poin
             ) : null,
           )}
           {last != null ? (
-            <Circle cx={x(lastIdx)} cy={y(last)} r={4} fill={bands ? STATUS_HEX[classify(last, bands)] : colors.text} stroke={colors.surface} strokeWidth={2} />
+            <Circle cx={x(lastIdx)} cy={y(last)} r={4} fill={bands ? (accent ? (classify(last, bands) === 'normal' ? colors.point : accent) : STATUS_HEX[classify(last, bands)]) : colors.text} stroke={colors.surface} strokeWidth={2} />
           ) : null}
         </Svg>
       )}

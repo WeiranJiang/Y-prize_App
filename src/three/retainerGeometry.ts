@@ -8,7 +8,8 @@
  * a gentle scallop. Points are laid on a near-regular grid with a small
  * jitter, so they read as an evenly sampled precise surface.
  */
-import { ARCH_CENTER, localToModel, toothFrames, ToothFrame, Vec3 } from '../domain/arch';
+import { ARCH_CENTER, archFrames, localToModel, ToothFrame, Vec3 } from '../domain/arch';
+import type { Arch } from '../domain/teeth';
 
 export interface PointCloud {
   positions: Float32Array;
@@ -80,13 +81,13 @@ function superPoint(a: number, b: number, p: number, phi: number) {
   return [a * Math.sign(c) * Math.pow(Math.abs(c), e), b * Math.sign(s) * Math.pow(Math.abs(s), e)] as const;
 }
 
-export function buildRetainerCloud(): PointCloud {
+export function buildRetainerCloud(arch: Arch = 'upper'): PointCloud {
   const P: number[] = [];
   const N: number[] = [];
   const T: number[] = [];
   const R: number[] = [];
   const rand = rng(7);
-  const frames = toothFrames();
+  const frames = archFrames(arch);
   const centers = new Map<number, Vec3>();
 
   const push = (p: Vec3, n: Vec3, tooth: number) => {
@@ -97,7 +98,7 @@ export function buildRetainerCloud(): PointCloud {
     R.push(rand());
   };
 
-  for (const f of frames.values()) {
+  for (const f of frames) {
     if (f.tooth.position > 7) continue; // retainer stops at the second molars
     const k = kindOf(f.tooth.position);
     const p = EXP[k];
@@ -169,7 +170,8 @@ export function buildRetainerCloud(): PointCloud {
   }
 
   // Centre the cloud on the arch centre.
-  const off: Vec3 = [-ARCH_CENTER[0], -ARCH_CENTER[1], -ARCH_CENTER[2]];
+  const C = ARCH_CENTER[arch];
+  const off: Vec3 = [-C[0], -C[1], -C[2]];
   for (let i = 0; i < P.length; i += 3) {
     P[i] += off[0];
     P[i + 1] += off[1];
@@ -189,10 +191,11 @@ export function buildRetainerCloud(): PointCloud {
 }
 
 /** Contoured scanning-tray outline (dim points) used in the Scan animation. */
-export function buildTrayCloud(): Float32Array {
+export function buildTrayCloud(arch: Arch = 'upper'): Float32Array {
   const pts: number[] = [];
-  const frames = [...toothFrames().values()].filter((f) => f.tooth.position <= 7);
-  const off = [-ARCH_CENTER[0], -ARCH_CENTER[1], -ARCH_CENTER[2]];
+  const frames = archFrames(arch).filter((f) => f.tooth.position <= 7);
+  const C = ARCH_CENTER[arch];
+  const off = [-C[0], -C[1], -C[2]];
   for (const f of frames) {
     for (let t = -f.w / 2; t <= f.w / 2; t += 0.9) {
       for (let n = -9; n <= 9; n += 0.9) {

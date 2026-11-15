@@ -2,31 +2,22 @@ import { useIsFocused, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Dimensions, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import ArchDiagram from '../../components/ArchDiagram';
+import ArchToggle from '../../components/ArchToggle';
+import BiomarkerLegend from '../../components/BiomarkerLegend';
 import BottomSheet from '../../components/BottomSheet';
 import Sparkline from '../../components/charts/Sparkline';
 import FloatingLabel from '../../components/FloatingLabel';
 import Icon from '../../components/Icon';
 import { OIR } from '../../components/SiteDetail';
-import { Card, DemoBadge, Divider, IconButton, KV, Legend, Screen, Section, Segmented, StatusTag, T } from '../../components/ui';
+import { Card, DemoBadge, Divider, IconButton, KV, Screen, Section, Segmented, StatusTag, T } from '../../components/ui';
 import { siteAnchor } from '../../domain/arch';
 import { confidenceOf, readingStatus, siteSeries, siteTitle, SiteResult, surfaceLabel } from '../../domain/analysis';
-import { BIOMARKER_ORDER, BIOMARKERS, BiomarkerId, formatValue, Status, STATUS_RANK } from '../../domain/biomarkers';
+import { BIOMARKER_ORDER, BIOMARKERS, BiomarkerId, formatDelta, formatValue, STATUS_RANK, unitSuffix } from '../../domain/biomarkers';
 import { RETAINER_TEETH, searchTeeth, Tooth, toothByUniversal, toothNumber } from '../../domain/teeth';
 import { useStore } from '../../state/store';
 import RetainerView, { Selection } from '../../three/RetainerView';
 import { regionsForScan, ViewMode } from '../../three/regions';
 import { colors, font, radius, space } from '../../theme/tokens';
-
-function legendFor(mode: ViewMode) {
-  if (mode !== 'pH') return undefined;
-  const b = BIOMARKERS.pH.bands;
-  return [
-    { status: 'normal' as Status, label: `≥${b.mild.toFixed(1)}` },
-    { status: 'mild' as Status, label: `${b.elevated.toFixed(1)}–${b.mild.toFixed(1)}` },
-    { status: 'elevated' as Status, label: `${b.high.toFixed(1)}–${b.elevated.toFixed(1)}` },
-    { status: 'high' as Status, label: `<${b.high.toFixed(1)}` },
-  ];
-}
 
 /** Deterministic per-transmitter split of a site reading (research view). */
 function transmitterRows(r: SiteResult) {
@@ -45,7 +36,7 @@ function transmitterRows(r: SiteResult) {
 
 export default function Explore() {
   const params = useLocalSearchParams<{ tooth?: string; site?: string }>();
-  const { latestScan, stripById, analysis, insights, state, dispatch } = useStore();
+  const { latestScan, stripById, analysis, insights, state, dispatch, arch, setArch } = useStore();
   const focused = useIsFocused();
   const strip = latestScan ? stripById(latestScan.stripId) : undefined;
   const [mode, setMode] = useState<ViewMode>('overview');
@@ -60,21 +51,33 @@ export default function Explore() {
   const research = state.settings.view === 'research';
 
   useEffect(() => {
-    if (params.tooth) setTooth(Number(params.tooth));
+    if (params.tooth) {
+      const u = Number(params.tooth);
+      setTooth(u);
+      const a = toothByUniversal(u).arch;
+      if (a !== arch) setArch(a);
+    }
     setSiteId(params.site ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.tooth, params.site]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const regions = useMemo(() => regionsForScan(latestScan, strip, mode), [latestScan, strip, mode, state.rev]);
 
-  const statusByTooth = useMemo(() => {
-    const m = new Map<number, Status>();
+  // Arch map: each tooth takes the biomarker colour of its most concerning reading; in-range teeth stay plain.
+  const marks = useMemo(() => {
+    const best = new Map<number, { rank: number; color: string; dashed?: boolean }>();
     analysis?.results.forEach((r) => {
       if (mode !== 'overview' && r.site.biomarker !== mode) return;
-      const prev = m.get(r.site.toothUniversal);
-      if (!prev || STATUS_RANK[r.status] > STATUS_RANK[prev]) m.set(r.site.toothUniversal, r.status);
+      if (r.status === 'normal') return;
+      const rank = STATUS_RANK[r.status];
+      const prev = best.get(r.site.toothUniversal);
+      if (!prev || rank > prev.rank)
+        best.set(r.site.toothUniversal, { rank, color: r.status === 'unavailable' ? colors.unavailable : BIOMARKERS[r.site.biomarker].color, dashed: r.status === 'unavailable' });
     });
-    return m;
+    return best;
   }, [analysis, mode]);
+  const concernBiomarkers = [...new Set((analysis?.results ?? []).filter((r) => STATUS_RANK[r.status] >= 1).map((r) => r.site.biomarker))];
 
   const onSelect = (s: Selection | null) => {
     setTooth(s?.tooth ?? null);
@@ -83,7 +86,7 @@ export default function Explore() {
 
   const t: Tooth | null = tooth ? toothByUniversal(tooth) : null;
   const toothSites = analysis?.results.filter((r) => r.site.toothUniversal === tooth) ?? [];
-  const covered = !!t && RETAINER_TEETH.some((x) => x.universal === t.universal);
+  const covered = !!t && RETAINER_TEETH.some((x) => x.universal === t.universal) && t.arch === arch;
   const toothInsights = insights.filter((i) => i.siteIds.some((id) => toothSites.find((r) => r.site.id === id)));
   const selSite = siteId ? analysis?.results.find((r) => r.site.id === siteId) : undefined;
   const results = query ? searchTeeth(query, numbering).slice(0, 6) : [];
@@ -103,7 +106,9 @@ export default function Explore() {
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <T v="display" style={{ fontSize: 30 }}>Explore</T>
-            <T v="small" style={{ marginTop: 2 }}>Tap a tooth or coloured area · {numbering === 'universal' ? 'Universal' : 'FDI'} numbering</T>
+            <View style={{ marginTop: space.md }}>
+              <ArchToggle onChange={() => onSelect(null)} />
+            </View>
           </View>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <IconButton name="search" onPress={() => setSearching((v) => !v)} />
@@ -127,7 +132,7 @@ export default function Explore() {
             {results.map((r) => (
               <Pressable
                 key={r.universal}
-                onPress={() => { setTooth(r.universal); setSiteId(null); setSearching(false); setQuery(''); }}
+                onPress={() => { if (r.arch !== arch) setArch(r.arch); setTooth(r.universal); setSiteId(null); setSearching(false); setQuery(''); }}
                 style={{ paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between' }}
               >
                 <T v="bodyStrong" style={{ fontSize: 14 }}>{r.name}</T>
@@ -151,6 +156,8 @@ export default function Explore() {
 
         <View style={{ height: Math.max(300, Dimensions.get('window').height * 0.42) }}>
           <RetainerView
+            key={arch}
+            arch={arch}
             style={{ flex: 1 }}
             regions={regions}
             selectedTooth={tooth}
@@ -165,18 +172,18 @@ export default function Explore() {
             <FloatingLabel
               pos={labelPos}
               title={`${toothNumber(selSite.tooth, numbering)} · ${surfaceLabel(selSite.tooth, selSite.site.surface)}`}
-              value={selSite.reading.value != null ? `pH ${formatValue(BIOMARKERS.pH, selSite.reading.value)}` : 'Not measured'}
+              value={selSite.reading.value != null ? `${BIOMARKERS[selSite.site.biomarker].shortName} ${formatValue(BIOMARKERS[selSite.site.biomarker], selSite.reading.value)} ${BIOMARKERS[selSite.site.biomarker].unit === 'pH' ? '' : BIOMARKERS[selSite.site.biomarker].unit}` : 'Not measured'}
               status={selSite.status}
             />
           ) : null}
           {latestScan?.demo ? <DemoBadge style={{ position: 'absolute', left: space.xl, top: space.sm }} /> : null}
         </View>
-        <Legend title={mode === 'pH' ? 'pH' : 'Overview'} items={legendFor(mode)} />
+        <BiomarkerLegend mode={mode === 'signal' ? 'overview' : mode} only={mode === 'overview' ? concernBiomarkers : undefined} />
 
-        <Section title="Dental arch" action={<T v="small">Upper retainer</T>}>
+        <Section title="Dental arch" action={<T v="small">{arch === 'upper' ? 'Upper' : 'Lower'} retainer · {numbering === 'universal' ? 'Universal' : 'FDI'}</T>}>
           <Card style={{ paddingHorizontal: 6 }}>
-            <ArchDiagram statusByTooth={statusByTooth} selected={tooth} onSelect={(u) => { setTooth(u); setSiteId(null); }} numbering={numbering} />
-            <T v="small" style={{ textAlign: 'center', fontSize: 11 }}>Outlined teeth have no sensing site. No lower-arch strip is paired.</T>
+            <ArchDiagram key={arch} arch={arch} marks={marks} selected={tooth} onSelect={(u) => { setTooth(u); setSiteId(null); }} numbering={numbering} />
+            <T v="small" style={{ textAlign: 'center', fontSize: 11 }}>Coloured teeth have a reading that needs attention. Dashed: a reading was withheld.</T>
           </Card>
         </Section>
 
@@ -185,13 +192,13 @@ export default function Explore() {
             <T v="label">{toothNumber(t, numbering)} · {numbering === 'universal' ? `FDI ${t.fdi}` : `Universal #${t.universal}`}</T>
             <T v="title" style={{ marginTop: 6 }}>{t.name}</T>
             {!covered ? (
-              <T v="body" style={{ marginTop: space.md }}>This tooth is not covered by your current retainer strip, so there are no measurements here.</T>
+              <T v="body" style={{ marginTop: space.md }}>{t.arch !== arch ? `This tooth is on your ${t.arch} arch. Switch to ${t.arch === 'upper' ? 'Upper' : 'Lower'} teeth to see it.` : 'This tooth is not covered by your retainer strip, so there are no measurements here.'}</T>
             ) : toothSites.length === 0 ? (
               <T v="body" style={{ marginTop: space.md }}>Covered by your retainer, but no sensing site is configured on this tooth. Neighbouring readings are not extrapolated here.</T>
             ) : (
               <>
                 <T v="body" style={{ marginTop: 4 }}>
-                  Measured locations: {toothSites.map((r) => surfaceLabel(t, r.site.surface)).join(', ')}
+                  Measured: {toothSites.map((r) => `${surfaceLabel(t, r.site.surface)} ${BIOMARKERS[r.site.biomarker].shortName}`).join(' · ')}
                 </T>
                 {toothSites.map((r) => (
                   <SiteCard key={r.site.id} r={r} selected={siteId === r.site.id} onPress={() => setSiteId(siteId === r.site.id ? null : r.site.id)} research={research} />
@@ -251,7 +258,7 @@ function SiteCard({ r, selected, onPress, research }: { r: SiteResult; selected:
   const series = siteSeries(r.site.id, state.scans).slice(-10);
   const t = siteTitle(r.site, state.settings.numbering);
   const strip = latestScan ? stripById(latestScan.stripId) : undefined;
-  const anchor = siteAnchor(r.site.toothUniversal, r.site.surface).p;
+  const anchor = siteAnchor(r.site.toothUniversal, r.site.surface, r.site.offset).p;
   return (
     <Card onPress={onPress} style={[{ marginTop: space.md }, selected && { borderColor: colors.textSecondary }]}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -263,16 +270,16 @@ function SiteCard({ r, selected, onPress, research }: { r: SiteResult; selected:
           <T v="small">{b.name}</T>
           <T v="number" style={{ fontSize: 34 }}>
             {formatValue(b, r.reading.value)}
-            {r.reading.value != null ? <T v="small">  ± {r.reading.uncertainty.toFixed(1)} {b.unit}</T> : null}
+            {r.reading.value != null ? <T v="small">  ± {formatValue(b, r.reading.uncertainty)}{unitSuffix(b)}</T> : null}
           </T>
         </View>
         <View style={{ width: 120 }}>
-          <Sparkline points={series.map((p) => p.value)} bands={b.bands} height={40} />
+          <Sparkline accent={b.color} points={series.map((p) => p.value)} bands={b.bands} height={40} />
         </View>
       </View>
       <Divider style={{ marginVertical: space.md }} />
       <KV k="Previous scan" v={r.previous ? `${formatValue(b, r.previous.value)}${r.previous.comparable ? '' : ' (other calibration)'}` : '—'} />
-      <KV k="Change" v={r.change != null ? `${r.change > 0 ? '+' : ''}${r.change.toFixed(1)} ${b.unit} units` : '—'} />
+      <KV k="Change" v={r.change != null ? `${formatDelta(b, r.change)}${unitSuffix(b)}` : '—'} />
       <KV k="Quality" v={r.reading.value == null ? 'Withheld (below floor)' : `${confidenceOf(r.reading.quality)} · ${(r.reading.quality * 100).toFixed(0)}`} />
       <KV k="Calibration" v={r.reading.calibration === 'ok' ? 'Calibrated' : 'Recalibration recommended'} />
       <KV k="Read" v={latestScan ? new Date(latestScan.at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—'} />

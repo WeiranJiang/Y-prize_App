@@ -15,13 +15,19 @@ npm run typecheck
 
 | Tab | What it does |
 |---|---|
-| **Home** | Interactive point-cloud retainer with localized pH regions, summary cards, strip health, insights, recommendations |
+| **Home** | Upper/Lower toggle, the interactive point-cloud retainer, one status line (last scan · scan quality), strip health, insights, recommendations |
 | **Scan** | Prepare → wear timer → place in case → optical scan (beam sweep, staged progress) → results / retry |
-| **Explore** | Mode switch (pH active; lactate/calcium research, others planned), 3D tooth focus, arch map, tooth search (Universal/FDI), per-site detail, research view with sensor-level data |
+| **Explore** | Upper/Lower toggle, biomarker modes (pH, lactate, calcium, phosphate, fluoride, ammonium), 3D tooth focus, arch map, tooth search (Universal/FDI), per-site detail, research view with sensor-level data |
 | **Trends** | Time/biomarker/location filters, per-site small multiples (never averaged), neighbouring-site comparison, persistent sites, reliability, link to 3D before/after compare |
 | **Profile** | Case & strip, numbering, consumer/research mode, protocol, configurable pH thresholds and strip limits |
 
 Other routes: `/strip` (strip health), `/compare`, `/scan-details`, `/about`.
+
+## Arches and biomarkers
+
+Both upper and lower retainers carry a strip (28 and 15 sensing sites in the demo). The Upper/Lower toggle is global: every screen follows it, and one case readout scans both strips.
+
+Each biomarker has its own colour on the 3D map: pH orange-red, lactate amber, calcium blue, phosphate teal, fluoride orchid, ammonium rose. **Only readings that need attention are coloured**, deeper colour meaning more concern. In-range sites stay plain white dots. Withheld readings get a faint slate ring, so "not measured" is never mistaken for "healthy". With six hues, colour alone can't separate every pair for colour-blind viewers, so identity is always backed by a name: the legend, the per-biomarker filter and the tap label.
 
 ## Biofouling & strip replacement (`src/domain/fouling.ts`)
 
