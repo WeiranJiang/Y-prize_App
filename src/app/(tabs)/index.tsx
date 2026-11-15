@@ -3,12 +3,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Dimensions, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import ArchDiagram from '../../components/ArchDiagram';
 import ArchToggle from '../../components/ArchToggle';
-import BiomarkerCard from '../../components/BiomarkerCard';
 import Icon from '../../components/Icon';
 import Loupe from '../../components/Loupe';
 import { Divider, IconButton, Legend, Meta, Screen, Section, StatusDot, T } from '../../components/ui';
-import { BIOMARKER_ORDER, STATUS_RANK } from '../../domain/biomarkers';
-import { biomarkerStat } from '../../domain/overview';
+import { STATUS_RANK } from '../../domain/biomarkers';
 import { RETAINER_TEETH, searchTeeth, toothByUniversal } from '../../domain/teeth';
 import { useStore } from '../../state/store';
 import RetainerView, { Selection } from '../../three/RetainerView';
@@ -45,8 +43,6 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.tooth]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const stats = useMemo(() => BIOMARKER_ORDER.map((id) => biomarkerStat(id, state.scans, state.strips, 30)), [state.scans, state.strips, state.rev]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const regions = useMemo(() => regionsForScan(latestScan, strip, 'overview'), [latestScan, strip, state.rev]);
 
@@ -111,19 +107,6 @@ export default function Home() {
             ))}
           </View>
         ) : null}
-
-        {/* Biomarkers */}
-        <Section title="Biomarkers" action={<Pressable onPress={() => router.navigate('/overview')} hitSlop={8}><T v="small" style={{ color: colors.text }}>Overview</T></Pressable>}>
-          <View style={{ gap: space.sm }}>
-            {[0, 2, 4].map((i) => (
-              <View key={i} style={{ flexDirection: 'row', gap: space.sm }}>
-                <BiomarkerCard s={stats[i]} />
-                <BiomarkerCard s={stats[i + 1]} />
-              </View>
-            ))}
-          </View>
-          <Meta style={{ marginTop: space.sm }}>Median across monitored sites · 30-day trend</Meta>
-        </Section>
 
         {/* Tooth map */}
         <Section title="Tooth map" action={<ArchToggle onChange={() => setLoupe(null)} />}>

@@ -108,7 +108,7 @@ export default function Overview() {
           {o.biomarkers.map((b) => {
             const bm = BIOMARKERS[b.id];
             return (
-              <Pressable key={b.id} style={styles.tileWrap} onPress={() => router.navigate({ pathname: '/trends', params: { bio: b.id } })}>
+              <Pressable key={b.id} style={styles.tileWrap} onPress={() => router.push({ pathname: '/biomarker', params: { id: b.id } })}>
                 <Card style={styles.tile}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <T v="small" style={{ color: colors.text }}>{bm.shortName}</T>
