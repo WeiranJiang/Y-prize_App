@@ -1,6 +1,8 @@
-import { router } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import ArchDiagram from '../../components/ArchDiagram';
+import ArchToggle from '../../components/ArchToggle';
 import ColumnChart from '../../components/charts/ColumnChart';
 import LineChart, { LPoint } from '../../components/charts/LineChart';
 import Sparkline from '../../components/charts/Sparkline';
@@ -9,11 +11,11 @@ import { Card, DemoBadge, Screen, Section, Segmented, StatusDot, T } from '../..
 import { persistentSites, siteSeries, siteTitle } from '../../domain/analysis';
 import { BIOMARKER_ORDER, BIOMARKERS, BiomarkerId, classify, formatDelta, formatValue, STATUS_RANK, unitSuffix } from '../../domain/biomarkers';
 import { usableFractionOf } from '../../domain/fouling';
+import { toothByUniversal, toothNumber } from '../../domain/teeth';
 import { useStore } from '../../state/store';
 import { colors, space } from '../../theme/tokens';
 
 type Range = '7' | '30' | '90' | 'all';
-type Loc = 'mouth' | 'upper' | 'lower' | 'tooth' | 'site';
 
 const dayFmt = (x: number) => new Date(x).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 const tipFmt = (x: number) => new Date(x).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -30,13 +32,23 @@ function niceTicks(lo: number, hi: number, n = 5) {
 }
 
 export default function Trends() {
-  const { state, strip, stripFor, latestScan, arch, setArch } = useStore();
+  const params = useLocalSearchParams<{ tooth?: string; bio?: string }>();
+  const { state, strip, latestScan, arch, setArch } = useStore();
   const [range, setRange] = useState<Range>('30');
   const [bio, setBio] = useState<BiomarkerId>('pH');
-  const [loc, setLoc] = useState<Loc>('mouth');
-  const [siteId, setSiteId] = useState('S01');
-  const [toothU, setToothU] = useState(3);
+  const [toothSel, setToothSel] = useState<number | null>(params.tooth ? Number(params.tooth) : null);
   const [pair, setPair] = useState(0);
+  useEffect(() => {
+    if (!params.tooth) return;
+    const u = Number(params.tooth);
+    if (toothByUniversal(u).arch !== arch) setArch(toothByUniversal(u).arch);
+    setToothSel(u);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.tooth]);
+  useEffect(() => {
+    if (params.bio && params.bio in BIOMARKERS) setBio(params.bio as BiomarkerId);
+  }, [params.bio]);
+  const selTooth = toothSel != null && toothByUniversal(toothSel).arch === arch ? toothSel : null;
   const b = BIOMARKERS[bio];
   const numbering = state.settings.numbering;
   const fmt = (v: number) => formatValue(b, v);
@@ -54,12 +66,8 @@ export default function Trends() {
     .filter((s, i) => i > 0 && s.stripId !== archScans[i - 1].stripId)
     .map((s) => ({ x: +new Date(s.at), label: 'New strip' }));
 
-  const strips = loc === 'mouth' ? [stripFor('upper'), stripFor('lower')] : [strip];
-  const measureSites = strips.flatMap((st) => st.sites.filter((s) => s.biomarker === bio));
   const archSites = strip.sites.filter((s) => s.biomarker === bio).sort((x, y) => x.toothUniversal - y.toothUniversal);
-  const sid = archSites.find((s) => s.id === siteId) ? siteId : archSites[0]?.id;
-  const teeth = [...new Set(archSites.map((s) => s.toothUniversal))];
-  const tu = teeth.includes(toothU) ? toothU : teeth[0];
+  const measureSites = archSites;
 
   const toPoints = (id: string): LPoint[] =>
     siteSeries(id, scans, bio).map((p) => ({
@@ -87,7 +95,16 @@ export default function Trends() {
     })
     .sort((a, z) => STATUS_RANK[z.status] - STATUS_RANK[a.status]);
 
-  const persistent = strips.flatMap((st) => persistentSites(st, scans)).filter((p) => p.site.biomarker === bio);
+  const persistent = persistentSites(strip, scans).filter((p) => p.site.biomarker === bio);
+
+  // Arch map coloured for the selected biomarker: concerning teeth take its colour.
+  const marks = new Map<number, { color: string; dashed?: boolean }>();
+  for (const x of sitesSorted) {
+    if (x.status === 'normal' || marks.has(x.s.toothUniversal)) continue;
+    marks.set(x.s.toothUniversal, x.status === 'unavailable' ? { color: colors.unavailable, dashed: true } : { color: b.color });
+  }
+  const toothSites = selTooth != null ? archSites.filter((s) => s.toothUniversal === selTooth) : [];
+  const otherOnTooth = selTooth != null ? [...new Set(strip.sites.filter((s) => s.toothUniversal === selTooth && s.biomarker !== bio).map((s) => s.biomarker))] : [];
 
   // Neighbouring pairs along the arch, most concerning first.
   const pairs = archSites
@@ -101,6 +118,7 @@ export default function Trends() {
     .slice(0, 3);
   const pr = pairs[Math.min(pair, Math.max(0, pairs.length - 1))];
 
+  void STATUS_RANK;
   const changes = measureSites
     .map((s) => {
       const series = siteSeries(s.id, scans, bio).filter((p) => p.value != null);
@@ -132,120 +150,119 @@ export default function Trends() {
       <View style={{ marginTop: space.lg, gap: 8 }}>
         <Segmented options={[{ key: '7', label: '7 days' }, { key: '30', label: '30 days' }, { key: '90', label: '90 days' }, { key: 'all', label: 'All time' }]} value={range} onChange={setRange} />
         <Segmented options={bioOptions} value={bio} onChange={(k) => (strip.supported.includes(k) ? setBio(k) : null)} />
-        <Segmented
-          options={[
-            { key: 'mouth', label: 'Entire mouth' },
-            { key: 'upper', label: 'Upper arch' },
-            { key: 'lower', label: 'Lower arch' },
-            { key: 'tooth', label: `Tooth · ${arch}` },
-            { key: 'site', label: `Surface · ${arch}` },
-          ]}
-          value={loc === 'upper' || loc === 'lower' ? arch : loc}
-          onChange={(k) => {
-            if (k === 'upper' || k === 'lower') setArch(k);
-            setLoc(k);
-          }}
-        />
       </View>
 
-      {(loc === 'tooth' || loc === 'site') && (
-        <View style={{ marginTop: 8 }}>
-          {loc === 'tooth' ? (
-            <Segmented
-              options={teeth.map((u) => ({ key: String(u), label: siteTitle(archSites.find((s) => s.toothUniversal === u)!, numbering).number }))}
-              value={String(tu)}
-              onChange={(k) => setToothU(Number(k))}
-            />
-          ) : (
-            <Segmented
-              options={archSites.map((s) => {
-                const t = siteTitle(s, numbering);
-                return { key: s.id, label: `${t.number} ${t.surface.toLowerCase()}` };
-              })}
-              value={sid}
-              onChange={setSiteId}
-            />
-          )}
-        </View>
-      )}
+      <View style={{ paddingHorizontal: space.xl, marginTop: space.lg }}>
+        <ArchToggle onChange={() => setToothSel(null)} />
+      </View>
 
-      <Section title={`${b.name} over time`}>
-        {loc === 'mouth' || loc === 'upper' ? (
-          <Card style={{ paddingVertical: 4 }}>
-            <T v="small" style={{ paddingVertical: space.md }}>Each monitored site is shown separately; locations are never averaged together.</T>
-            {sitesSorted.map(({ s, series, last, status }, i) => {
-              const t = siteTitle(s, numbering);
-              return (
-                <Pressable key={s.id} onPress={() => { setSiteId(s.id); setLoc('site'); }} style={[styles.smRow, i > 0 && styles.rowBorder]}>
-                  <View style={{ width: 118 }}>
-                    <T v="small" style={{ color: colors.text }} numberOfLines={1}>{t.number} {t.surface.toLowerCase()}</T>
-                    <T v="small" style={{ fontSize: 11 }} numberOfLines={1}>{t.tooth.shortName}{s.role === 'comparison' ? ' · ref' : ''}</T>
+      <Section title="Tap a tooth">
+        <Card style={{ paddingHorizontal: 6 }}>
+          <ArchDiagram key={arch} arch={arch} marks={marks} selected={selTooth} onSelect={setToothSel} numbering={numbering} />
+          <T v="small" style={{ textAlign: 'center', fontSize: 11 }}>Coloured teeth have a {b.shortName} reading that needs attention</T>
+        </Card>
+      </Section>
+
+      {selTooth != null ? (
+        <Section>
+          <T v="label">{toothNumber(toothByUniversal(selTooth), numbering)} · {b.name}</T>
+          <T v="title" style={{ marginTop: 4 }}>{toothByUniversal(selTooth).name}</T>
+          {toothSites.length === 0 ? (
+            <Card style={{ marginTop: space.md }}>
+              <T v="body">No {b.shortName} sensor on this tooth.</T>
+              {otherOnTooth.length ? (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: space.md }}>
+                  {otherOnTooth.map((id) => (
+                    <Pressable key={id} onPress={() => setBio(id)} style={styles.chip}>
+                      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: BIOMARKERS[id].color }} />
+                      <T v="small" style={{ color: colors.text }}>{BIOMARKERS[id].shortName}</T>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : null}
+            </Card>
+          ) : (
+            <Card style={{ marginTop: space.md }}>
+              {/* Now */}
+              {toothSites.map((s, i) => {
+                const last = siteSeries(s.id, scans, bio).pop();
+                const st = classify(last?.value ?? null, b.bands);
+                return (
+                  <View key={s.id} style={[styles.nowRow, i > 0 && styles.rowBorder]}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: st === 'normal' ? colors.point : st === 'unavailable' ? 'transparent' : b.color, borderWidth: st === 'unavailable' ? 1 : 0, borderColor: colors.unavailable }} />
+                    <T v="small" style={{ flex: 1, color: colors.text }} numberOfLines={1}>{siteTitle(s, numbering).surface}</T>
+                    <T v="number" style={{ fontSize: 22 }}>{last?.value == null ? '—' : fmt(last.value)}<T v="small">{unitSuffix(b)}</T></T>
+                    <T v="small" style={{ width: 104, textAlign: 'right', fontSize: 11 }} numberOfLines={2}>{st === 'unavailable' ? 'Not measured' : st === 'normal' ? 'In range' : b.statusWords[st]}</T>
                   </View>
-                  <View style={{ flex: 1, paddingHorizontal: 10 }}>
-                    <Sparkline accent={b.color} points={series.map((p) => p.value)} bands={b.bands} height={30} domain={yDomain} />
-                  </View>
-                  <View style={{ width: 54, alignItems: 'flex-end' }}>
-                    <T v="bodyStrong" style={{ fontVariant: ['tabular-nums'], color: last?.value == null ? colors.textSecondary : colors.text }}>{last?.value == null ? 'n/a' : formatValue(b, last.value)}</T>
-                    <StatusDot status={status} size={6} />
-                  </View>
-                </Pressable>
-              );
-            })}
-          </Card>
-        ) : (
-          <Card>
-            {(() => {
-              const ids = loc === 'site' ? (sid ? [sid] : []) : archSites.filter((s) => s.toothUniversal === tu).map((s) => s.id);
-              const palette = [colors.seriesA, colors.seriesB];
-              const series = ids.slice(0, 2).map((id, i) => {
-                const s = strip.sites.find((x) => x.id === id)!;
-                return {
-                  id,
-                  label: siteTitle(s, numbering).surface,
-                  color: ids.length === 1 ? colors.text : palette[i],
-                  points: toPoints(id),
-                  markerColor: ids.length === 1 ? (p: LPoint) => (classify(p.y, b.bands) === 'normal' ? colors.point : b.color) : undefined,
-                };
-              });
-              const s0 = strip.sites.find((x) => x.id === ids[0]);
-              return (
-                <>
-                  <T v="bodyStrong">{s0 ? `${siteTitle(s0, numbering).tooth.name}${loc === 'site' ? ` · ${siteTitle(s0, numbering).surface}` : ''}` : ''}</T>
-                  {series.length > 1 ? (
-                    <View style={{ flexDirection: 'row', gap: 16, marginTop: 8 }}>
-                      {series.map((s) => (
-                        <View key={s.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <View style={{ width: 14, height: 2, backgroundColor: s.color }} />
-                          <T v="small" style={{ fontSize: 11 }}>{s.label}</T>
+                );
+              })}
+              {/* Trend */}
+              <View style={{ marginTop: space.lg }}>
+                {(() => {
+                  const series = toothSites.slice(0, 2).map((s, i) => ({
+                    id: s.id,
+                    label: siteTitle(s, numbering).surface,
+                    color: toothSites.length === 1 ? colors.text : [colors.seriesA, colors.seriesB][i],
+                    points: toPoints(s.id),
+                    markerColor: toothSites.length === 1 ? (p: LPoint) => (classify(p.y, b.bands) === 'normal' ? colors.point : b.color) : undefined,
+                  }));
+                  return (
+                    <>
+                      {series.length > 1 ? (
+                        <View style={{ flexDirection: 'row', gap: 16, marginBottom: 8 }}>
+                          {series.map((x) => (
+                            <View key={x.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <View style={{ width: 14, height: 2, backgroundColor: x.color }} />
+                              <T v="small" style={{ fontSize: 11 }}>{x.label}</T>
+                            </View>
+                          ))}
                         </View>
-                      ))}
-                    </View>
-                  ) : null}
-                  <View style={{ marginTop: space.md }}>
-                    <LineChart
-                      series={series}
-                      height={220}
-                      yDomain={yDomain}
-                      yTicks={yTicks}
-                      formatY={fmt}
-                      xDomain={xDomain}
-                      xTicks={xTicks}
-                      formatX={dayFmt}
-                      formatTooltipX={tipFmt}
-                      band={normalBand}
-                      thresholds={[{ y: b.bands.elevated, label: `Research threshold ${fmt(b.bands.elevated)}${unitSuffix(b)}` }]}
-                      verticals={stripChanges}
-                      endLabels={series.length > 1}
-                    />
-                  </View>
-                  <T v="small" style={{ fontSize: 11, marginTop: space.sm }}>
-                    Shaded: configured normal range. Coloured markers need attention. Hollow markers: low quality or read late. Ticks on the baseline: no usable reading.
-                  </T>
-                </>
-              );
-            })()}
-          </Card>
-        )}
+                      ) : null}
+                      <LineChart
+                        series={series}
+                        height={210}
+                        yDomain={yDomain}
+                        yTicks={yTicks}
+                        formatY={fmt}
+                        xDomain={xDomain}
+                        xTicks={xTicks}
+                        formatX={dayFmt}
+                        formatTooltipX={tipFmt}
+                        band={normalBand}
+                        thresholds={[{ y: b.bands.elevated, label: `Threshold ${fmt(b.bands.elevated)}${unitSuffix(b)}` }]}
+                        verticals={stripChanges}
+                        endLabels={series.length > 1}
+                      />
+                    </>
+                  );
+                })()}
+              </View>
+              <T v="small" style={{ fontSize: 11, marginTop: space.sm }}>Shaded: normal range · coloured dots need attention · hollow: low quality</T>
+            </Card>
+          )}
+        </Section>
+      ) : null}
+
+      <Section title={`All ${b.shortName} sites`}>
+        <Card style={{ paddingVertical: 4 }}>
+          {sitesSorted.map(({ s, series, last, status }, i) => {
+            const t = siteTitle(s, numbering);
+            return (
+              <Pressable key={s.id} onPress={() => setToothSel(s.toothUniversal)} style={[styles.smRow, i > 0 && styles.rowBorder]}>
+                <View style={{ width: 118 }}>
+                  <T v="small" style={{ color: colors.text }} numberOfLines={1}>{t.number} {t.surface.toLowerCase()}</T>
+                  <T v="small" style={{ fontSize: 11 }} numberOfLines={1}>{t.tooth.shortName}{s.role === 'comparison' ? ' · ref' : ''}</T>
+                </View>
+                <View style={{ flex: 1, paddingHorizontal: 10 }}>
+                  <Sparkline accent={b.color} points={series.map((p) => p.value)} bands={b.bands} height={30} domain={yDomain} />
+                </View>
+                <View style={{ width: 54, alignItems: 'flex-end' }}>
+                  <T v="bodyStrong" style={{ fontVariant: ['tabular-nums'], color: last?.value == null ? colors.textSecondary : colors.text }}>{last?.value == null ? 'n/a' : formatValue(b, last.value)}</T>
+                </View>
+              </Pressable>
+            );
+          })}
+        </Card>
       </Section>
 
       <Section title="Compare neighbouring sites">
@@ -314,7 +331,7 @@ export default function Trends() {
             persistent.map((p, i) => {
               const t = siteTitle(p.site, numbering);
               return (
-                <Pressable key={p.site.id} onPress={() => router.navigate({ pathname: '/explore', params: { tooth: String(p.site.toothUniversal), site: p.site.id } })} style={[styles.smRow, i > 0 && styles.rowBorder]}>
+                <Pressable key={p.site.id} onPress={() => setToothSel(p.site.toothUniversal)} style={[styles.smRow, i > 0 && styles.rowBorder]}>
                   <View style={{ flex: 1 }}>
                     <T v="bodyStrong" style={{ fontSize: 14 }}>{t.tooth.name}</T>
                     <T v="small">{t.surface} · {cmpWord} {b.shortName} {fmt(b.bands.elevated)}{unitSuffix(b)} in {p.below} of last {p.valid} valid scans</T>
@@ -328,23 +345,6 @@ export default function Trends() {
               );
             })
           )}
-        </Card>
-      </Section>
-
-      <Section title="Recent change" action={<T v="small">vs. ~7 days earlier</T>}>
-        <Card style={{ paddingVertical: 4 }}>
-          {changes.map((c, i) => {
-            const t = siteTitle(c.s, numbering);
-            return (
-              <View key={c.s.id} style={[styles.smRow, i > 0 && styles.rowBorder]}>
-                <View style={{ flex: 1 }}>
-                  <T v="small" style={{ color: colors.text }}>{t.number} {t.surface.toLowerCase()}</T>
-                  {!c.comparable ? <T v="small" style={{ fontSize: 11 }}>Different strip calibration: not directly comparable</T> : null}
-                </View>
-                <T v="bodyStrong" style={{ fontVariant: ['tabular-nums'] }}>{formatDelta(b, c.delta)}</T>
-              </View>
-            );
-          })}
         </Card>
       </Section>
 
@@ -393,5 +393,7 @@ export default function Trends() {
 const styles = StyleSheet.create({
   smRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
   rowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.hairline },
+  nowRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, height: 30, borderRadius: 999, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairlineStrong },
 });
 

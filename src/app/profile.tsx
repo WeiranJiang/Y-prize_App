@@ -1,10 +1,10 @@
 import { router } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import StripHealthCard from '../../components/StripHealthCard';
-import { Card, DemoBadge, Divider, Row, Screen, Section, Segmented, T } from '../../components/ui';
-import { useStore } from '../../state/store';
-import { colors, space } from '../../theme/tokens';
+import StripHealthCard from '../components/StripHealthCard';
+import { Card, DemoBadge, Divider, Row, Screen, Section, Segmented, T } from '../components/ui';
+import { useStore } from '../state/store';
+import { colors, space } from '../theme/tokens';
 
 function Step({ label, value, onMinus, onPlus }: { label: string; value: string; onMinus: () => void; onPlus: () => void }) {
   return (

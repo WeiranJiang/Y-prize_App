@@ -8,6 +8,24 @@ import type { Arch, NumberingSystem } from '../domain/teeth';
 import type { Protocol, Scan, Strip, StripLimits } from '../domain/types';
 
 export type CaseStatus = 'connected' | 'disconnected' | 'scanning' | 'syncing';
+
+/** Strip supply and reordering (demo — no real orders or payments). */
+export interface Plan {
+  mode: 'auto' | 'manual';
+  /** Strips per arch in each automatic delivery. */
+  perBox: Record<Arch, number>;
+  /** Ship automatically when spare strips for either arch fall to this many. */
+  reorderAt: number;
+  paused: boolean;
+}
+export interface Order {
+  id: string;
+  placedAt: string;
+  qty: Record<Arch, number>;
+  kind: 'auto' | 'manual';
+  status: 'processing' | 'shipped' | 'delivered';
+  eta: string;
+}
 export type ViewLevel = 'consumer' | 'research';
 
 export interface Settings {
@@ -28,6 +46,10 @@ interface State {
   settings: Settings;
   caseStatus: CaseStatus;
   caseBattery: number;
+  /** Spare strips at home, per arch. */
+  supply: Record<Arch, number>;
+  plan: Plan;
+  orders: Order[];
   /** Bumped whenever thresholds change, so derived data recomputes. */
   rev: number;
 }
@@ -37,6 +59,8 @@ type Action =
   | { type: 'replaceStrip'; at: Date }
   | { type: 'settings'; patch: Partial<Settings> }
   | { type: 'case'; status: CaseStatus }
+  | { type: 'plan'; patch: Partial<Plan> }
+  | { type: 'order'; qty: Record<Arch, number>; kind: 'auto' | 'manual'; at: Date }
   | { type: 'reset' };
 
 function initial(): State {
@@ -57,8 +81,18 @@ function initial(): State {
     },
     caseStatus: 'connected',
     caseBattery: 0.82,
+    supply: { upper: 1, lower: 2 },
+    plan: { mode: 'auto', perBox: { upper: 2, lower: 2 }, reorderAt: 1, paused: false },
+    orders: [
+      { id: 'ORD-1042', placedAt: daysAgo(30), qty: { upper: 2, lower: 2 }, kind: 'auto', status: 'delivered', eta: daysAgo(27) },
+      { id: 'ORD-1067', placedAt: daysAgo(12), qty: { upper: 2, lower: 2 }, kind: 'auto', status: 'delivered', eta: daysAgo(9) },
+    ],
     rev: 0,
   };
+}
+
+function daysAgo(n: number) {
+  return new Date(Date.now() - n * 86400000).toISOString();
 }
 
 const DEFAULT_PH = { ...BIOMARKERS.pH.bands };
@@ -75,7 +109,14 @@ function reducer(s: State, a: Action): State {
         st.id === s.currentStripIds[arch] ? { ...st, retiredAt: a.at.toISOString(), retiredReason: 'Replaced by user' } : st,
       );
       const next = makeStrip(id, arch, `B24-${id.slice(4)}`, a.at, 'cal-2.4');
-      return { ...s, strips: [...strips, next], currentStripIds: { ...s.currentStripIds, [arch]: id } };
+      const supply = { ...s.supply, [arch]: Math.max(0, s.supply[arch] - 1) };
+      let st: State = { ...s, strips: [...strips, next], currentStripIds: { ...s.currentStripIds, [arch]: id }, supply };
+      // Automatic plan: reorder when spares run low and nothing is already on its way.
+      const pending = s.orders.some((o) => o.status !== 'delivered');
+      if (s.plan.mode === 'auto' && !s.plan.paused && !pending && Math.min(supply.upper, supply.lower) <= s.plan.reorderAt) {
+        st = reducer(st, { type: 'order', qty: s.plan.perBox, kind: 'auto', at: a.at });
+      }
+      return st;
     }
     case 'settings': {
       const settings = { ...s.settings, ...a.patch };
@@ -85,6 +126,13 @@ function reducer(s: State, a: Action): State {
     }
     case 'case':
       return { ...s, caseStatus: a.status };
+    case 'plan':
+      return { ...s, plan: { ...s.plan, ...a.patch } };
+    case 'order': {
+      const n = 1068 + s.orders.length;
+      const eta = new Date(a.at.getTime() + 3 * 86400000).toISOString();
+      return { ...s, orders: [{ id: `ORD-${n}`, placedAt: a.at.toISOString(), qty: a.qty, kind: a.kind, status: 'processing', eta }, ...s.orders] };
+    }
     case 'reset':
       BIOMARKERS.pH.bands = { ...DEFAULT_PH };
       return initial();

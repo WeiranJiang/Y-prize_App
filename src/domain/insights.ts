@@ -49,7 +49,7 @@ function regionPhrase(sites: { site: { toothUniversal: number } }[]) {
 }
 
 /** Biomarker-specific plain-English interpretation and advice. Never diagnostic. */
-const COPY: Record<BiomarkerId, { finding: string; repeated: string; interpret: string; single: string; advice: (interdental: boolean) => string; rec: string }> = {
+export const COPY: Record<BiomarkerId, { finding: string; repeated: string; interpret: string; single: string; advice: (interdental: boolean) => string; rec: string }> = {
   pH: {
     finding: 'Elevated acidity detected',
     repeated: 'Repeated low pH',
@@ -140,7 +140,7 @@ export function buildInsights(
       siteIds: [r.site.id],
       confidence: confidenceOf(r.reading.quality) === 'Low' ? 'Moderate' : 'High',
       priority: 100 + STATUS_RANK[r.status] * 10 + (r.site.biomarker === 'pH' ? 2 : 0),
-      action: { label: 'View site', href: `/explore?tooth=${r.site.toothUniversal}&site=${r.site.id}` },
+      action: { label: 'View site', href: `/?tooth=${r.site.toothUniversal}` },
     });
   }
 
@@ -166,7 +166,7 @@ export function buildInsights(
       siteIds: [r.site.id],
       confidence: confidenceOf(r.reading.quality),
       priority: 80 + STATUS_RANK[r.status] * 10,
-      action: { label: 'View site', href: `/explore?tooth=${r.site.toothUniversal}&site=${r.site.id}` },
+      action: { label: 'View site', href: `/?tooth=${r.site.toothUniversal}` },
     });
   }
 

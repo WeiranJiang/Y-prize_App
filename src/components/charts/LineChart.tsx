@@ -53,7 +53,7 @@ export default function LineChart(props: Props) {
   const [hover, setHover] = useState<number | null>(null);
   const allX = useMemo(() => series.flatMap((s) => s.points.map((p) => p.x)), [series]);
   const xd: [number, number] = props.xDomain ?? [Math.min(...allX), Math.max(...allX)];
-  const endPad = props.endLabels ? 46 : 0;
+  const endPad = props.endLabels ? 58 : 0;
   const iw = Math.max(1, w - PAD.l - PAD.r - endPad);
   const ih = height - PAD.t - PAD.b;
   const sx = (x: number) => PAD.l + ((x - xd[0]) / (xd[1] - xd[0] || 1)) * iw;
@@ -164,7 +164,7 @@ export default function LineChart(props: Props) {
                 return (
                   <G key={s.id + 'lbl'}>
                     <SvgText x={sx(last.x) + 9} y={sy(last.y) + 3.5} fontSize={10.5} fill={colors.text} fontFamily={font.medium}>
-                      {s.label}
+                      {s.label.length > 9 ? `${s.label.slice(0, 8)}…` : s.label}
                     </SvgText>
                   </G>
                 );

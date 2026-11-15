@@ -40,7 +40,7 @@ export default function CaseIndicator() {
   }, [busy, pulse]);
 
   return (
-    <Pressable onPress={() => router.navigate('/profile')} style={styles.wrap} accessibilityLabel={`Scanning case ${LABEL[state.caseStatus]}, battery ${Math.round(state.caseBattery * 100)}%`}>
+    <Pressable onPress={() => router.push('/scan')} style={styles.wrap} accessibilityLabel={`Scanning case ${LABEL[state.caseStatus]}, battery ${Math.round(state.caseBattery * 100)}%. Start a scan.`}>
       <View>
         <Icon name="case" size={22} color={colors.text} />
         <Animated.View style={[styles.dot, { backgroundColor: DOT[state.caseStatus], opacity: pulse }]} />
@@ -48,6 +48,9 @@ export default function CaseIndicator() {
       <View style={{ marginLeft: 8 }}>
         <T v="small" style={{ color: colors.text, fontSize: 11, lineHeight: 13 }}>{LABEL[state.caseStatus]}</T>
         <T v="small" style={{ fontSize: 10, lineHeight: 12 }}>Case {Math.round(state.caseBattery * 100)}%</T>
+      </View>
+      <View style={{ marginLeft: 10, paddingLeft: 10, borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: colors.hairlineStrong }}>
+        <T v="small" style={{ color: colors.text, fontSize: 12 }}>Start scan</T>
       </View>
     </Pressable>
   );

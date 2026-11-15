@@ -3,17 +3,17 @@ import * as Haptics from 'expo-haptics';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import CaseIllustration from '../../components/CaseIllustration';
-import Icon from '../../components/Icon';
-import { replaceEta } from '../../components/StripHealthCard';
-import ArchToggle from '../../components/ArchToggle';
-import BiomarkerLegend from '../../components/BiomarkerLegend';
-import { Button, Card, DemoBadge, Divider, Screen, StatusDot, T } from '../../components/ui';
-import { pct } from '../../domain/fouling';
-import { useStore } from '../../state/store';
-import RetainerView from '../../three/RetainerView';
-import { regionsForScan } from '../../three/regions';
-import { colors, space } from '../../theme/tokens';
+import CaseIllustration from '../components/CaseIllustration';
+import Icon from '../components/Icon';
+import { replaceEta } from '../components/StripHealthCard';
+import ArchToggle from '../components/ArchToggle';
+import BiomarkerLegend from '../components/BiomarkerLegend';
+import { Button, Card, DemoBadge, Divider, Screen, StatusDot, T } from '../components/ui';
+import { pct } from '../domain/fouling';
+import { useStore } from '../state/store';
+import RetainerView from '../three/RetainerView';
+import { regionsForScan } from '../three/regions';
+import { colors, space } from '../theme/tokens';
 
 type Step = 'prepare' | 'wear' | 'place' | 'scanning' | 'results';
 
@@ -304,7 +304,7 @@ export default function Scan() {
             <ResultLine icon="strip" text={`${store.arch === 'upper' ? 'Upper' : 'Lower'} strip clarity ${health.clarity != null ? pct(health.clarity) : '—'} · replace in ${replaceEta(health).toLowerCase()}`} />
             <ResultLine icon="layers" text="Both retainers were read; switch above to see the other arch" />
           </View>
-          <Button label="Explore results" style={{ marginTop: space.xl }} onPress={() => { restart(); router.navigate('/explore'); }} />
+          <Button label="Explore results" style={{ marginTop: space.xl }} onPress={() => { restart(); router.navigate('/'); }} />
           <Button label="View scan details" kind="secondary" style={{ marginTop: space.md }} onPress={() => latest && router.push({ pathname: '/scan-details', params: { id: latest.id } })} />
           {a.withheld.length || a.readoutLate ? (
             <Button

@@ -8,3 +8,4 @@ android/
 .DS_Store
 expo-env.d.ts
 .claude/
+server/node_modules/
