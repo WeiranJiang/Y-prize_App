@@ -101,7 +101,7 @@ export default function Trends() {
   // Arch map coloured for the selected biomarker: concerning teeth take its colour.
   const marks = new Map<number, { color: string; dashed?: boolean }>();
   for (const x of sitesSorted) {
-    if (x.status === 'normal' || marks.has(x.s.toothUniversal)) continue;
+    if (marks.has(x.s.toothUniversal)) continue;
     marks.set(x.s.toothUniversal, x.status === 'unavailable' ? { color: colors.unavailable, dashed: true } : { color: STATUS_HEX[x.status] });
   }
   const toothSites = selTooth != null ? archSites.filter((s) => s.toothUniversal === selTooth) : [];
@@ -160,7 +160,7 @@ export default function Trends() {
       <Section title="Tap a tooth">
         <Card style={{ paddingHorizontal: 6 }}>
           <ArchDiagram key={arch} arch={arch} marks={marks} selected={selTooth} onSelect={setToothSel} numbering={numbering} />
-          <T v="small" style={{ textAlign: 'center', fontSize: 11 }}>Coloured teeth have a {b.shortName} reading that needs attention</T>
+          <T v="small" style={{ textAlign: 'center', fontSize: 11 }}>Green: {b.shortName} in range · amber/red: needs a look</T>
         </Card>
       </Section>
 

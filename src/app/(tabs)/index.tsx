@@ -48,8 +48,8 @@ export default function Home() {
 
   const marks = useMemo(() => {
     const best = new Map<number, { rank: number; color: string; dashed?: boolean }>();
+    // Every monitored tooth gets a mark: green in range, amber/red for concerns, dashed if unmeasured.
     analysis?.results.forEach((r) => {
-      if (r.status === 'normal') return;
       const rank = STATUS_RANK[r.status];
       const prev = best.get(r.site.toothUniversal);
       if (!prev || rank > prev.rank) best.set(r.site.toothUniversal, { rank, color: STATUS_HEX[r.status], dashed: r.status === 'unavailable' });
@@ -123,7 +123,7 @@ export default function Home() {
               <ArchDiagram key={arch} arch={arch} marks={marks} selected={loupe} onSelect={openTooth} numbering={numbering} />
             </View>
             <View style={{ paddingBottom: space.md }}>
-              <Legend items={[{ status: 'mild', label: 'Borderline' }, { status: 'high', label: 'Needs attention' }]} />
+              <Legend />
             </View>
           </View>
         </Section>
@@ -132,13 +132,19 @@ export default function Home() {
         <Section title="Findings">
           <View style={styles.list}>
             {findings.map((i, idx) => (
-              <Pressable key={i.id} onPress={i.action ? () => router.push(i.action!.href as never) : undefined} style={({ pressed }) => [styles.listRow, idx > 0 && styles.listBorder, pressed && { backgroundColor: colors.surfaceRaised }]}>
-                <View style={{ paddingTop: 6 }}>
+              <Pressable
+                key={i.id}
+                onPress={() => {
+                  const site = i.siteIds.length ? analysis?.results.find((x) => x.site.id === i.siteIds[0]) : undefined;
+                  if (site) openTooth(site.site.toothUniversal);
+                  else if (i.action) router.push(i.action.href as never);
+                }}
+                style={({ pressed }) => [styles.listRow, idx > 0 && styles.listBorder, pressed && { backgroundColor: colors.surfaceRaised }]}>
+                <View style={{ paddingTop: 7 }}>
                   <StatusDot status={i.status === 'info' ? 'unavailable' : i.status} size={6} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <T v="bodyStrong" style={{ fontSize: 15 }}>{i.title}</T>
-                  <T v="small" style={{ marginTop: 2 }} numberOfLines={2}>{i.summary}</T>
                 </View>
                 <Icon name="chevron" size={14} color={colors.textMuted} />
               </Pressable>
@@ -148,15 +154,31 @@ export default function Home() {
 
         <Section title="Recommended">
           <View style={styles.list}>
-            {recommendations.map((r, idx) => (
-              <View key={r.id} style={[styles.listRow, idx > 0 && styles.listBorder]}>
-                <T v="small" style={{ width: 18, color: colors.textMuted, paddingTop: 1 }}>{idx + 1}</T>
-                <View style={{ flex: 1 }}>
-                  <T v="bodyStrong" style={{ fontSize: 15 }}>{r.text}</T>
-                  <T v="small" style={{ marginTop: 2 }}>{r.why}</T>
-                </View>
-              </View>
-            ))}
+            {recommendations.map((r, idx) => {
+              // Link each recommendation to the spot it is about (or to strip health).
+              const ins = insights.find((i) => i.id === r.insightId);
+              const site = ins?.siteIds.length ? analysis?.results.find((x) => x.site.id === ins.siteIds[0]) : undefined;
+              const go = site
+                ? () => openTooth(site.site.toothUniversal)
+                : ins?.kind === 'strip'
+                  ? () => router.push('/strip')
+                  : undefined;
+              return (
+                <Pressable
+                  key={r.id}
+                  onPress={go}
+                  disabled={!go}
+                  style={({ pressed }) => [styles.listRow, idx > 0 && styles.listBorder, pressed && go && { backgroundColor: colors.surfaceRaised }]}
+                  accessibilityLabel={site ? `${r.text}. Show tooth ${site.site.toothUniversal}` : r.text}
+                >
+                  <T v="small" style={{ width: 18, color: colors.textMuted, paddingTop: 1 }}>{idx + 1}</T>
+                  <View style={{ flex: 1 }}>
+                    <T v="bodyStrong" style={{ fontSize: 15 }}>{r.text}</T>
+                  </View>
+                  {go ? <Icon name="chevron" size={14} color={colors.textMuted} /> : null}
+                </Pressable>
+              );
+            })}
           </View>
           <Pressable onPress={() => router.push('/about')} style={{ marginTop: space.lg }}>
             <Meta>Research indicators — not a diagnosis of decay or gum disease. How findings are made ›</Meta>

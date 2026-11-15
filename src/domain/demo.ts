@@ -84,6 +84,10 @@ export const UPPER_SITES: SensingSite[] = [
   site('F03', 15, 'lingual', 'fluoride'),
   site('A01', 6, 'buccal', 'ammonium'),
   site('A02', 12, 'gingival', 'ammonium'),
+  site('S13', 5, 'buccal'),
+  site('S14', 12, 'buccal'),
+  site('C05', 13, 'gingival', 'calcium'),
+  site('P04', 14, 'distal', 'phosphate'),
 ];
 
 /** Lower strip. */
@@ -103,6 +107,11 @@ export const LOWER_SITES: SensingSite[] = [
   site('P21', 28, 'buccal', 'phosphate'),
   site('F21', 25, 'buccal', 'fluoride'),
   site('A21', 23, 'lingual', 'ammonium'),
+  site('C23', 19, 'buccal', 'calcium'),
+  site('F22', 19, 'lingual', 'fluoride', { offset: [1.6, 0] }),
+  site('A22', 30, 'lingual', 'ammonium', { offset: [1.6, 0] }),
+  site('S29', 31, 'buccal'),
+  site('S30', 18, 'buccal'),
 ];
 
 export const REF_TEMPLATE: Record<Arch, Strip['referenceSpots']> = {
@@ -187,7 +196,9 @@ function trueValue(s: SensingSite, n: number, r: () => number): number {
     case 'L04': return 1.3 + g * 0.15;
     case 'C01': return 1.08 - ramp(n, 8, 0.035, 0.46) + g * 0.03; // calcium falling at #3 buccal
     case 'C02': return 1.35 + g * 0.04;
-    case 'C03': return 1.2 + g * 0.04;
+    case 'C03': return 1.12 - ramp(n, 12, 0.03, 0.2) + g * 0.03; // drifting low at #14
+    case 'C05': return 1.15 + g * 0.04;
+    case 'P04': return 3.4 - ramp(n, 10, 0.08, 0.9) + g * 0.1; // phosphate falling at #14 distal
     case 'C04': return 0.88 + g * 0.03; // slightly low
     case 'P01': return 4.3 + g * 0.15;
     case 'P02': return 2.7 + g * 0.12; // slightly low
@@ -211,6 +222,11 @@ function trueValue(s: SensingSite, n: number, r: () => number): number {
     case 'P21': return 4.5 + g * 0.15;
     case 'F21': return 0.06 + g * 0.004;
     case 'A21': return 5.0 + g * 0.2;
+    case 'C23': return 1.1 - ramp(n, 4, 0.032, 0.55) + g * 0.03; // calcium falling at #19
+    case 'F22': return 0.06 - ramp(n, 14, 0.0025, 0.022) + g * 0.003;
+    case 'A22': return 4.3 + g * 0.2;
+    case 'S29': return 6.75 + g * 0.07;
+    case 'S30': return 6.6 + g * 0.07;
     default: return 6.95 + g * 0.08;
   }
 }

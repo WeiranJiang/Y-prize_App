@@ -1,14 +1,15 @@
 import { router } from 'expo-router';
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { siteTitle } from '../domain/analysis';
+import { analyzeScan, siteTitle } from '../domain/analysis';
 import { BIOMARKERS, formatValue, STATUS_RANK, unitSuffix } from '../domain/biomarkers';
 import { toothByUniversal, toothNumber } from '../domain/teeth';
 import { useStore } from '../state/store';
 import RetainerView from '../three/RetainerView';
-import { Region, STATUS_HEX } from '../three/regions';
+import { Region, regionsForScan, STATUS_HEX } from '../three/regions';
 import { colors, space } from '../theme/tokens';
 import Icon from './Icon';
+import Timeline from './Timeline';
 import { Button, T } from './ui';
 
 const ND = Platform.OS !== 'web';
@@ -16,10 +17,23 @@ const SIZE = 248;
 
 /**
  * Magnifier: a circular, zoomed-in view of one tooth that pops out over the
- * Home screen, with that tooth's readings underneath.
+ * Home screen, with that tooth's readings underneath. Dragging the timeline
+ * replays every scan, so the tooth visibly changes over time.
  */
 export default function Loupe({ tooth, regions, onClose }: { tooth: number | null; regions: Region[]; onClose: () => void }) {
-  const { analysis, arch, state } = useStore();
+  const { arch, state, stripById } = useStore();
+  const scans = useMemo(
+    () => state.scans.filter((s) => stripById(s.stripId)?.arch === arch).sort((a, b) => +new Date(a.at) - +new Date(b.at)),
+    [state.scans, arch, stripById],
+  );
+  const [idx, setIdx] = useState(scans.length - 1);
+  useEffect(() => setIdx(scans.length - 1), [tooth, scans.length]);
+  const scan = scans[Math.min(idx, scans.length - 1)];
+  const scanStrip = scan ? stripById(scan.stripId) : undefined;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const regionsAt = useMemo(() => (scan && scanStrip ? regionsForScan(scan, scanStrip, 'overview') : regions), [scan, scanStrip, state.rev]);
+  const analysis = useMemo(() => (scan && scanStrip ? analyzeScan(scan, scanStrip, []) : undefined), [scan, scanStrip, state.rev]);
+  const breaks = scans.map((s, i) => (i > 0 && s.stripId !== scans[i - 1].stripId ? i : -1)).filter((i) => i > 0);
   const scale = useRef(new Animated.Value(0.6)).current;
   const fade = useRef(new Animated.Value(0)).current;
   const open = tooth != null;
@@ -57,7 +71,7 @@ export default function Loupe({ tooth, regions, onClose }: { tooth: number | nul
               key={`${arch}-${tooth}`}
               arch={arch}
               style={{ width: SIZE, height: SIZE }}
-              regions={regions}
+              regions={regionsAt}
               selectedTooth={tooth}
               focusTooth={tooth}
               autoRotate={false}
@@ -77,16 +91,27 @@ export default function Loupe({ tooth, regions, onClose }: { tooth: number | nul
               </Pressable>
             </View>
 
-            <ScrollView style={{ maxHeight: 210, marginTop: space.md }} showsVerticalScrollIndicator={false}>
+            {scans.length > 1 ? (
+              <View style={{ marginTop: space.md }}>
+                <Timeline
+                  count={scans.length}
+                  index={Math.min(idx, scans.length - 1)}
+                  onChange={setIdx}
+                  breaks={breaks}
+                  label={scan ? new Date(scan.at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : ''}
+                />
+              </View>
+            ) : null}
+
+            <ScrollView style={{ maxHeight: 190, marginTop: space.sm }} showsVerticalScrollIndicator={false}>
               {rows.length === 0 ? (
                 <T v="small">No sensor on this tooth. Nearby readings are not estimated here.</T>
               ) : (
                 rows.map((r) => {
                   const b = BIOMARKERS[r.site.biomarker];
-                  const concern = r.status !== 'normal' && r.status !== 'unavailable';
                   return (
                     <View key={r.site.id} style={styles.row}>
-                      <View style={[styles.dot, { backgroundColor: concern ? STATUS_HEX[r.status] : r.status === 'unavailable' ? 'transparent' : colors.point }, r.status === 'unavailable' && styles.dashed]} />
+                      <View style={[styles.dot, { backgroundColor: r.status === 'unavailable' ? 'transparent' : STATUS_HEX[r.status] }, r.status === 'unavailable' && styles.dashed]} />
                       <T v="small" style={{ flex: 1, color: colors.text }} numberOfLines={1}>
                         {b.shortName} <T v="small">· {siteTitle(r.site).surface.toLowerCase()}</T>
                       </T>
