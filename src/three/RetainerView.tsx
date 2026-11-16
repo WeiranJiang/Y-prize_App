@@ -133,6 +133,27 @@ void main() {
 }
 `;
 
+// Discrete SPOT markers keep every configured location visible, including uncalibrated sites.
+const SENSOR_VERT = `
+attribute vec3 aSensorColor;
+attribute float aReference;
+varying vec3 vSensorColor;
+varying float vReference;
+void main() {
+  vSensorColor = aSensorColor;
+  vReference = aReference;
+  gl_PointSize = aReference > 0.5 ? 9.0 : 7.0;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`;
+const SENSOR_FRAG = `
+varying vec3 vSensorColor;
+varying float vReference;
+void main() {
+  float d = length(gl_PointCoord - 0.5);
+  if (d > 0.48 || (vReference > 0.5 && d < 0.29)) discard;
+  gl_FragColor = vec4(d > 0.38 && vReference < 0.5 ? vec3(0.04) : vSensorColor, 1.0);
+}`;
+
 const ease = (t: number) => 1 - Math.pow(1 - t, 3);
 
 export default function RetainerView(props: Props) {
@@ -394,6 +415,14 @@ export default function RetainerView(props: Props) {
     });
     group.add(new THREE.Points(geo, mat));
 
+    const sensorGeometry = new THREE.BufferGeometry();
+    const sensorMaterial = new THREE.ShaderMaterial({ vertexShader: SENSOR_VERT, fragmentShader: SENSOR_FRAG, transparent: true, depthTest: false, depthWrite: false });
+    const sensorPoints = new THREE.Points(sensorGeometry, sensorMaterial);
+    sensorPoints.frustumCulled = false;
+    sensorPoints.renderOrder = 2;
+    group.add(sensorPoints);
+    let lastSensorRegions: Region[] | undefined;
+
     projector.current = { camera, group };
     const t0 = Date.now();
     let lastW = W;
@@ -404,6 +433,19 @@ export default function RetainerView(props: Props) {
       raf.current = requestAnimationFrame(loop);
       const pr = p.current;
       if (pr.active === false) return;
+      if (pr.regions !== lastSensorRegions) {
+        lastSensorRegions = pr.regions;
+        const positions: number[] = [];
+        const markerColors: number[] = [];
+        for (const region of pr.regions) {
+          positions.push(region.anchor[0] + cloud.offset[0], region.anchor[1] + cloud.offset[1], region.anchor[2] + cloud.offset[2]);
+          const rgb = Number.parseInt(region.color.slice(1), 16);
+          markerColors.push(((rgb >> 16) & 255) / 255, ((rgb >> 8) & 255) / 255, (rgb & 255) / 255);
+        }
+        sensorGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        sensorGeometry.setAttribute('aSensorColor', new THREE.Float32BufferAttribute(markerColors, 3));
+        sensorGeometry.setAttribute('aReference', new THREE.Float32BufferAttribute(pr.regions.map(region => region.intensity === 0 ? 1 : 0), 1));
+      }
       const now = Date.now();
       const t = (now - t0) / 1000;
 

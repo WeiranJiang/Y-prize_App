@@ -1,3 +1,4 @@
+import { siteOnTooth, siteTeeth } from '../domain/sensorLayout';
 import { router } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -51,7 +52,7 @@ export default function Loupe({ tooth, regions, onClose }: { tooth: number | nul
   const rows = useMemo(
     () =>
       (analysis?.results ?? [])
-        .filter((r) => r.site.toothUniversal === tooth)
+        .filter((r) => siteOnTooth(r.site, tooth))
         .sort((a, b) => STATUS_RANK[b.status] - STATUS_RANK[a.status]),
     [analysis, tooth],
   );
@@ -113,13 +114,13 @@ export default function Loupe({ tooth, regions, onClose }: { tooth: number | nul
                     <View key={r.site.id} style={styles.row}>
                       <View style={[styles.dot, { backgroundColor: r.status === 'unavailable' ? 'transparent' : STATUS_HEX[r.status] }, r.status === 'unavailable' && styles.dashed]} />
                       <T v="small" style={{ flex: 1, color: colors.text }} numberOfLines={1}>
-                        {b.shortName} <T v="small">· {siteTitle(r.site).surface.toLowerCase()}</T>
+                        {b.shortName} <T v="small">· {`${siteTitle(r.site, numbering).number} ${siteTitle(r.site, numbering).surface}`.toLowerCase()}</T>
                       </T>
                       <T v="small" style={{ color: colors.text, fontVariant: ['tabular-nums'] }}>
                         {r.reading.value == null ? '—' : `${formatValue(b, r.reading.value)}${unitSuffix(b)}`}
                       </T>
                       <T v="small" style={{ width: 92, textAlign: 'right', fontSize: 11 }} numberOfLines={1}>
-                        {r.status === 'unavailable' ? 'Not measured' : r.status === 'normal' ? 'In range' : b.statusWords[r.status]}
+                        {b.bands.configured === false ? 'Not calibrated' : r.status === 'unavailable' ? 'Not measured' : r.status === 'normal' ? 'In range' : b.statusWords[r.status]}
                       </T>
                     </View>
                   );

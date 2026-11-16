@@ -1,3 +1,4 @@
+import { BIOMARKERS } from './biomarkers';
 /**
  * Strip-health analytics: biofouling sensing and time-to-replace.
  *
@@ -80,7 +81,7 @@ export function clarityOf(scan: Scan): number {
 }
 
 export function usableFractionOf(scan: Scan): number {
-  const measured = scan.readings;
+  const measured = scan.readings.filter(r => BIOMARKERS[r.biomarker].bands.configured !== false);
   return measured.length ? measured.filter((r) => r.value != null).length / measured.length : 0;
 }
 
@@ -155,7 +156,7 @@ export function computeStripHealth(
   }));
   const clarity = clarityOf(latest);
   const usableFraction = usableFractionOf(latest);
-  const siteSignals: SiteSignal[] = latest.readings.map((r) => ({
+  const siteSignals: SiteSignal[] = latest.readings.filter(r => BIOMARKERS[r.biomarker].bands.configured !== false).map((r) => ({
     siteId: r.siteId,
     transmission: r.transmission,
     snr: r.snr,

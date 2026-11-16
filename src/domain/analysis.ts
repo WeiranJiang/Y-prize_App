@@ -1,6 +1,7 @@
 import { SURFACE_LABEL, SurfaceId } from './arch';
 import { BIOMARKERS, BiomarkerId, classify, Status, STATUS_RANK } from './biomarkers';
 import { NumberingSystem, Tooth, toothByUniversal, toothNumber } from './teeth';
+import { siteTeeth } from './sensorLayout';
 import type { Scan, SensingSite, SiteReading, Strip } from './types';
 
 export interface SiteResult {
@@ -34,12 +35,15 @@ export function surfaceLabel(tooth: Tooth, surface: SurfaceId): string {
 
 export function siteTitle(site: SensingSite, system: NumberingSystem = 'universal') {
   const tooth = toothByUniversal(site.toothUniversal);
-  return {
-    tooth,
-    title: `${tooth.name}`,
-    surface: surfaceLabel(tooth, site.surface),
-    number: toothNumber(tooth, system),
-    full: `${tooth.name} — ${surfaceLabel(tooth, site.surface).toLowerCase()} ${site.surface === 'gingival' ? '' : 'surface'}`.trim(),
+  const numbers = siteTeeth(site).map(u => toothNumber(toothByUniversal(u), system));
+  const face = surfaceLabel(tooth, site.face ?? site.surface);
+  const location = site.contactWith != null
+    ? `${face} contact${site.height === 'gingival-margin' ? ' · gum line' : ''}`
+    : site.corner ? `${site.corner === 'mesial' ? 'Mesio' : 'Disto'}${face.toLowerCase()}`
+    : `${face}${site.half ? ` · ${site.half} half` : ''}${site.height === 'gingival-margin' ? ' · gum line' : ''}`;
+  return { tooth, title: site.contactWith ? `Contact ${numbers.join('/')}` : tooth.name,
+    surface: location, number: numbers.join('/'),
+    full: `${numbers.join('/')} — ${location}`,
   };
 }
 
@@ -97,7 +101,7 @@ export function analyzeScan(scan: Scan, strip: Strip, history: Scan[]): ScanAnal
     .filter((r) => STATUS_RANK[r.status] >= 2)
     .sort((a, b) => STATUS_RANK[b.status] - STATUS_RANK[a.status]);
   const belowThreshold = measured.filter((r) => STATUS_RANK[r.status] >= 2);
-  const withheld = results.filter((r) => r.reading.value == null);
+  const withheld = results.filter((r) => r.reading.value == null && BIOMARKERS[r.site.biomarker].bands.configured !== false);
   return {
     scan,
     strip,
@@ -105,7 +109,7 @@ export function analyzeScan(scan: Scan, strip: Strip, history: Scan[]): ScanAnal
     comparison,
     reviewSites,
     belowThreshold,
-    usable: results.length - withheld.length,
+    usable: results.filter(r => r.reading.value != null).length,
     total: results.length,
     recalibrate: results.filter((r) => r.reading.calibration === 'recalibrate' && r.reading.value != null),
     withheld,

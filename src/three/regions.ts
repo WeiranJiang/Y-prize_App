@@ -1,16 +1,7 @@
-/**
- * Converts measurements into colored regions on the point cloud.
- *
- * Each region is drawn only over the footprint its transmitters actually
- * sample (radius from the site config). Beyond ~1.7× footprint the colour
- * fades out entirely — unmeasured areas stay neutral and are never
- * interpolated. A dotted ring marks the edge of each measured area, and
- * withheld readings render slate-grey with the same ring so "unmeasured" is
- * never confused with "healthy". Healthy readings are not coloured at all.
- */
-import { siteAnchor, Vec3 } from '../domain/arch';
-import { analyzeScan, readingStatus } from '../domain/analysis';
-import { Status } from '../domain/biomarkers';
+/** Configured sensor locations use chemistry colours; the strip-health overlay uses labelled signal colours. */
+import { Vec3 } from '../domain/arch';
+import { BiomarkerId, Status } from '../domain/biomarkers';
+import { sensorAnchor, configuredSensorRegions } from '../domain/sensorGeometry';
 import type { Scan, Strip } from '../domain/types';
 import { colors } from '../theme/tokens';
 import type { PointCloud } from './retainerGeometry';
@@ -37,44 +28,14 @@ export const STATUS_HEX: Record<Status, string> = {
   unavailable: colors.unavailable,
 };
 
-export type ViewMode = 'overview' | 'pH' | 'lactate' | 'calcium' | 'phosphate' | 'fluoride' | 'ammonium' | 'signal';
+export type ViewMode = 'overview' | BiomarkerId | 'signal';
 
-/** Severity → how strongly the biomarker colour replaces the white dots. */
-export const SEVERITY_INTENSITY: Record<Exclude<Status, 'normal' | 'unavailable'>, number> = {
-  mild: 0.85,
-  elevated: 0.9,
-  high: 1,
-};
-
-/**
- * Only readings of concern are coloured: amber for borderline, red for
- * needs-attention. Healthy sites stay plain white dots. Withheld
- * readings get a faint slate ring so "not measured" is never read as healthy.
- */
+/** Chemistry colours describe configured sensor locations, not clinical severity. */
 export function regionsForScan(scan: Scan | undefined, strip: Strip | undefined, mode: ViewMode): Region[] {
-  if (!scan || !strip) return [];
-  if (mode === 'signal') return signalRegions(scan, strip);
+  if (!strip) return [];
+  if (mode === 'signal') return scan ? signalRegions(scan, strip) : [];
   if (mode !== 'overview' && !strip.supported.includes(mode)) return [];
-  const a = analyzeScan(scan, strip, []);
-  const out: Region[] = [];
-  for (const r of a.results) {
-    if (mode !== 'overview' && r.site.biomarker !== mode) continue;
-    const status = readingStatus(r.reading);
-    if (status === 'normal') continue;
-    const { p, n } = siteAnchor(r.site.toothUniversal, r.site.surface, r.site.offset);
-    out.push({
-      id: r.site.id,
-      tooth: r.site.toothUniversal,
-      anchor: p,
-      normal: n,
-      radius: r.site.footprintMm,
-      color: STATUS_HEX[status],
-      intensity: status === 'unavailable' ? 0.55 : SEVERITY_INTENSITY[status],
-      outline: true,
-      wrap: r.site.surface === 'mesial' || r.site.surface === 'distal',
-    });
-  }
-  return out;
+  return configuredSensorRegions(strip, mode);
 }
 
 /** Strip-health view: local optical transmission per site + reference spots. */
@@ -83,9 +44,10 @@ export function signalRegions(scan: Scan, strip: Strip): Region[] {
   const tColor = (t: number, usable: boolean) => (!usable ? colors.high : colors.mild);
   const out: Region[] = [];
   for (const s of strip.sites) {
+    if (s.biomarker === 'aMMP8') continue;
     const r = scan.readings.find((x) => x.siteId === s.id)!;
     if (r.value != null && r.transmission >= 0.8) continue;
-    const { p, n } = siteAnchor(s.toothUniversal, s.surface, s.offset);
+    const { p, n } = sensorAnchor(s);
     out.push({
       id: s.id,
       tooth: s.toothUniversal,
@@ -95,22 +57,7 @@ export function signalRegions(scan: Scan, strip: Strip): Region[] {
       color: tColor(r.transmission, r.value != null),
       intensity: 0.95,
       outline: true,
-      wrap: s.surface === 'mesial' || s.surface === 'distal',
-    });
-  }
-  for (const spot of strip.referenceSpots) {
-    const ref = scan.references.find((x) => x.spotId === spot.id);
-    if (ref && ref.transmission >= 0.8) continue;
-    const { p, n } = siteAnchor(spot.toothUniversal, spot.surface);
-    out.push({
-      id: spot.id,
-      tooth: spot.toothUniversal,
-      anchor: p,
-      normal: n,
-      radius: 1.3,
-      color: ref ? tColor(ref.transmission, true) : colors.unavailable,
-      intensity: 0.9,
-      outline: true,
+      wrap: s.contactWith != null,
     });
   }
   return out;

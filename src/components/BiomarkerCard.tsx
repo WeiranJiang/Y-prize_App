@@ -8,6 +8,7 @@ import Sparkline from './charts/Sparkline';
 import { StatusDot, T } from './ui';
 
 export function statLine(s: BiomarkerStat) {
+  if (BIOMARKERS[s.id].bands.configured === false) return 'Not calibrated';
   if (s.attention) return s.attention > 1 ? `${s.attention} sites need attention` : '1 site needs attention';
   if (s.borderline) return `${s.borderline} borderline`;
   if (s.status === 'unavailable') return 'Not measured';
@@ -29,7 +30,7 @@ export default function BiomarkerCard({ s }: { s: BiomarkerStat }) {
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: space.sm }}>
         <T v="number" style={{ fontSize: 26 }}>{formatValue(b, s.median)}</T>
-        <T v="small" style={{ marginLeft: 4, fontSize: 12, color: colors.textMuted }}>{unitSuffix(b).trim() || 'pH'}</T>
+        <T v="small" style={{ marginLeft: 4, fontSize: 12, color: colors.textMuted }}>{b.unit === 'pH' ? 'pH' : unitSuffix(b).trim()}</T>
       </View>
       <T v="small" style={{ fontSize: 12, marginTop: 2, color: s.status === 'high' || s.status === 'mild' ? colors.text : colors.textMuted }} numberOfLines={1}>
         {statLine(s)}

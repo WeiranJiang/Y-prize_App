@@ -11,9 +11,9 @@ import Sparkline from '../components/charts/Sparkline';
 import Disclosure from '../components/Disclosure';
 import { IconButton, Meta, Screen, Section, Segmented, StatusDot, StatusTag, T } from '../components/ui';
 import { siteSeries, siteTitle } from '../domain/analysis';
-import { BIOMARKERS, BiomarkerId, classify, formatValue, STATUS_RANK, unitSuffix } from '../domain/biomarkers';
+import { BIOMARKERS, BIOMARKER_COLORS, BiomarkerId, classify, formatValue, STATUS_RANK, unitSuffix } from '../domain/biomarkers';
 import { biomarkerStat } from '../domain/overview';
-import type { Arch } from '../domain/teeth';
+import { toothNumber, toothByUniversal, type Arch } from '../domain/teeth';
 import { useStore } from '../state/store';
 import { STATUS_HEX } from '../three/regions';
 import { colors, radius, space } from '../theme/tokens';
@@ -67,6 +67,20 @@ export default function BiomarkerDetail() {
     })
     .sort((x, y) => STATUS_RANK[y.status] - STATUS_RANK[x.status] || x.s.toothUniversal - y.s.toothUniversal);
 
+  if (b.bands.configured === false) {
+    const references = current.flatMap(strip => strip.sensorReferences.filter(reference => reference.biomarker === bio));
+    return <Screen>
+      <View style={styles.nav}><IconButton name="chevronLeft" label="Back" onPress={() => router.canGoBack() ? router.back() : router.navigate('/overview')} /></View>
+      <View style={{ paddingHorizontal: space.lg, marginTop: space.lg }}><T v="display">{b.shortName}</T><T v="body" style={{ marginTop: space.sm }}>Not calibrated</T><T v="body" style={{ marginTop: space.sm }}>{sites.length} sensor locations · {references.length} background reference{references.length === 1 ? '' : 's'}</T></View>
+      <Section title="Locations">
+        <View style={{ marginHorizontal: -space.lg, marginBottom: space.md }}><Segmented fill options={[{ key: 'both', label: 'All teeth' }, { key: 'upper', label: 'Upper' }, { key: 'lower', label: 'Lower' }]} value={where} onChange={setWhere} /></View>
+        <View style={styles.list}>{sites.map(({ s }, index) => <Pressable key={s.id} accessibilityRole="button" onPress={() => router.push({ pathname: '/tooth', params: { u: String(s.toothUniversal) } })} style={[styles.row, index > 0 && styles.border]}><View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: BIOMARKER_COLORS[bio] }} /><T v="body" style={{ flex: 1 }}>{siteTitle(s, numbering).full}</T><T v="body">›</T></Pressable>)}</View>
+      </Section>
+      <Section title="Background references"><View style={styles.list}>{references.map(reference => <View key={reference.id} style={styles.row}><T v="body">{toothNumber(toothByUniversal(reference.toothUniversal), numbering)} · {reference.toothUniversal < 17 ? 'palatal' : 'lingual'} gum margin</T></View>)}</View></Section>
+      <Section><Disclosure title="About this sensor"><T v="body">{b.limitation}</T></Disclosure></Section>
+    </Screen>;
+  }
+
   const vals = [...pts.map((p) => p.y), ...sites.map((x) => x.last?.value ?? null)].filter((v): v is number => v != null);
   const lo = Math.min(...vals, b.bands.high);
   const hi = Math.max(...vals, b.bands.mild);
@@ -94,13 +108,13 @@ export default function BiomarkerDetail() {
       <View style={{ paddingHorizontal: space.lg, marginTop: space.xl }}>
         <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
           <T v="number" style={{ fontSize: 52, letterSpacing: -1.2, fontWeight: '400' }}>{formatValue(b, stat.median)}</T>
-          <T v="body" style={{ marginLeft: 6, color: colors.textSecondary }}>{unitSuffix(b).trim() || 'pH'}</T>
+          <T v="body" style={{ marginLeft: 6, color: colors.textSecondary }}>{b.unit === 'pH' ? 'pH' : unitSuffix(b).trim()}</T>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.lg, marginTop: 4 }}>
           <StatusTag status={stat.status} label={statLine(stat)} />
         </View>
         <Meta style={{ marginTop: 6 }}>
-          Median of {stat.sites} sites{stat.at ? ` · ${scanTimeLabel(stat.at)}` : ''}
+          {`Median of ${stat.sites} sites`}{stat.at ? ` · ${scanTimeLabel(stat.at)}` : ''}
         </Meta>
       </View>
 
@@ -109,7 +123,7 @@ export default function BiomarkerDetail() {
         <Segmented fill options={RANGES} value={range} onChange={setRange} />
       </View>
       <View style={{ paddingHorizontal: space.sm, marginTop: space.lg }}>
-        {pts.length ? (
+        {pts.some(point => point.y != null) ? (
           <LineChart
             series={[{ id: 'm', label: 'Median', color: colors.text, points: pts, markerColor: (p) => STATUS_HEX[classify(p.y, b.bands)] }]}
             height={220}
@@ -126,7 +140,7 @@ export default function BiomarkerDetail() {
           />
         ) : (
           <View style={styles.empty}>
-            <T v="small">No scans in this period</T>
+            <T v="small">No readings in this period</T>
             <Meta style={{ marginTop: 4 }}>Choose a longer range or wait for the next case sync.</Meta>
           </View>
         )}

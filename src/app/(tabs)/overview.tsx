@@ -58,12 +58,12 @@ export default function Overview() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <T v="small" style={{ color: colors.text }}>{bm.shortName}</T>
                   </View>
-                  <T v="number" style={{ fontSize: 28, marginTop: 8 }}>{pctTxt(b.inRange)}</T>
+                  <T v="number" style={{ fontSize: 28, marginTop: 8 }}>{bm.bands.configured === false ? `${b.sites} sites` : pctTxt(b.inRange)}</T>
                   <T v="small" style={{ fontSize: 12 }}>
-                    {DIR[b.direction].arrow} {DIR[b.direction].word}
+                    {bm.bands.configured === false ? 'Not calibrated' : `${DIR[b.direction].arrow} ${DIR[b.direction].word}`}
                   </T>
                   <View style={{ marginTop: 8 }}>
-                    <Mini points={b.history} color={b.concerns ? colors.high : colors.point} w={96} />
+                    {bm.bands.configured !== false ? <Mini points={b.history} color={b.concerns ? colors.high : colors.point} w={96} /> : null}
                   </View>
                 </Card>
               </Pressable>

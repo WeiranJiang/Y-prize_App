@@ -35,7 +35,7 @@ export default function SiteDetail({ siteId, showExplore = true }: { siteId: str
   const status = readingStatus(r.reading);
   const ref = analysis.comparison;
   const insight = insights.find((i) => i.siteIds.includes(siteId) && (i.kind === 'finding' || i.kind === 'quality'));
-  const series = siteSeries(siteId, scans).slice(-10);
+  const series = siteSeries(siteId, scans, r.site.biomarker).slice(-10);
   const isComparison = r.site.role === 'comparison';
 
   return (

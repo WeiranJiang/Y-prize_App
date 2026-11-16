@@ -1,16 +1,17 @@
 import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Dimensions, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import BiomarkerLegend from '../../components/BiomarkerLegend';
 import ArchDiagram from '../../components/ArchDiagram';
 import ArchToggle from '../../components/ArchToggle';
 import Icon from '../../components/Icon';
 import Loupe from '../../components/Loupe';
-import { Button, IconButton, Legend, Meta, Screen, Section, Segmented, StatusDot, T } from '../../components/ui';
-import { STATUS_RANK } from '../../domain/biomarkers';
+import { Button, IconButton, Screen, Section, Segmented, StatusDot, T } from '../../components/ui';
+import { BIOMARKERS, BIOMARKER_COLORS, BIOMARKER_ORDER, BiomarkerId } from '../../domain/biomarkers';
 import { parseTooth, RETAINER_TEETH, searchTeeth, toothByUniversal } from '../../domain/teeth';
 import { useStore } from '../../state/store';
 import RetainerView, { Selection } from '../../three/RetainerView';
-import { regionsForScan, STATUS_HEX } from '../../three/regions';
+import { regionsForScan } from '../../three/regions';
 import { colors, font, radius, space } from '../../theme/tokens';
 
 export default function Home() {
@@ -20,6 +21,7 @@ export default function Home() {
   const strip = latestScan ? stripById(latestScan.stripId) : undefined;
   const [loupe, setLoupe] = useState<number | null>(null);
   const [searching, setSearching] = useState(false);
+  const [sensorType, setSensorType] = useState<'overview' | BiomarkerId>('overview');
   const [mapView, setMapView] = useState<'3d' | 'chart'>('3d');
   const [allRecommendations, setAllRecommendations] = useState(false);
   const [query, setQuery] = useState('');
@@ -36,18 +38,7 @@ export default function Home() {
   }, [params.tooth]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const regions = useMemo(() => regionsForScan(latestScan, strip, 'overview'), [latestScan, strip, state.rev]);
-
-  const marks = useMemo(() => {
-    const best = new Map<number, { rank: number; color: string; dashed?: boolean }>();
-    // Every monitored tooth gets a mark: green in range, amber/red for concerns, dashed if unmeasured.
-    analysis?.results.forEach((r) => {
-      const rank = STATUS_RANK[r.status];
-      const prev = best.get(r.site.toothUniversal);
-      if (!prev || rank > prev.rank) best.set(r.site.toothUniversal, { rank, color: STATUS_HEX[r.status], dashed: r.status === 'unavailable' });
-    });
-    return best;
-  }, [analysis]);
+  const regions = useMemo(() => regionsForScan(latestScan, strip, sensorType), [latestScan, strip, sensorType, state.rev]);
 
   const openTooth = (u: number) => {
     const a = toothByUniversal(u).arch;
@@ -103,6 +94,12 @@ export default function Home() {
         <Section title="Tooth map" action={<ArchToggle onChange={() => setLoupe(null)} />}>
           <View style={styles.mapCard}>
             <Segmented fill style={{ paddingHorizontal: space.md, paddingTop: space.md }} options={[{ key: '3d', label: '3D view' }, { key: 'chart', label: 'Tooth chart' }]} value={mapView} onChange={setMapView} />
+            <View accessibilityRole="tablist" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, padding: space.md }}>
+              {(['overview', ...BIOMARKER_ORDER] as const).map(id => <Pressable key={id} accessibilityRole="tab" accessibilityState={{ selected: sensorType === id }} onPress={() => setSensorType(id)} style={{ minHeight: 36, paddingHorizontal: 10, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: sensorType === id ? colors.surfaceRaised : colors.bg2, borderWidth: 1, borderColor: sensorType === id ? colors.textSecondary : colors.border }}>
+                {id !== 'overview' ? <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: BIOMARKER_COLORS[id] }} /> : null}
+                <T v="small" style={{ color: sensorType === id ? colors.text : colors.textSecondary }}>{id === 'overview' ? 'All sensors' : BIOMARKERS[id].shortName}</T>
+              </Pressable>)}
+            </View>
             {mapView === '3d' ? (
               <View style={{ height: Math.max(360, H * 0.44) }}>
                 <RetainerView key={arch} arch={arch} style={{ flex: 1 }} regions={regions} reveal selectedTooth={loupe} onSelect={onSelect} active={focused && loupe == null} />
@@ -110,11 +107,11 @@ export default function Home() {
               </View>
             ) : (
               <View style={{ paddingHorizontal: 6, paddingTop: space.sm, paddingBottom: space.md }}>
-                <ArchDiagram key={arch} arch={arch} marks={marks} selected={loupe} onSelect={openTooth} numbering={numbering} />
+                <ArchDiagram key={arch} arch={arch} sites={strip?.sites.filter(site => sensorType === 'overview' || site.biomarker === sensorType)} references={strip?.sensorReferences.filter(site => sensorType === 'overview' || site.biomarker === sensorType)} selected={loupe} onSelect={openTooth} numbering={numbering} />
               </View>
             )}
             <View style={{ paddingBottom: space.md }}>
-              <Legend />
+              <BiomarkerLegend only={[]} />
             </View>
           </View>
         </Section>

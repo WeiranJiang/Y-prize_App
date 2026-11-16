@@ -17,6 +17,12 @@ export interface SensingSite {
   transmitters: string[];
   /** [mm along the arch, mm in height] from the surface anchor, so sensors can share a surface. */
   offset?: [number, number];
+  /** A shared contact is one physical sensor associated with both teeth. */
+  contactWith?: number;
+  face?: 'buccal' | 'lingual';
+  height?: 'mid-crown' | 'gingival-margin';
+  half?: 'mesial' | 'distal';
+  corner?: 'mesial' | 'distal';
 }
 
 /** Chemically inert optical spot used to separate fouling from chemistry. */
@@ -25,6 +31,14 @@ export interface ReferenceSpot {
   label: string;
   toothUniversal: number;
   surface: SurfaceId;
+}
+
+/** Chemical compensation/background references, not optical clarity spots or clinical readings. */
+export interface SensorReferenceSpot extends Pick<SensingSite, 'toothUniversal' | 'surface' | 'face' | 'height' | 'offset'> {
+  id: string;
+  label: string;
+  biomarker: BiomarkerId;
+  purpose: 'potassium-compensation' | 'ammp8-background';
 }
 
 export interface Strip {
@@ -38,6 +52,8 @@ export interface Strip {
   supported: BiomarkerId[];
   sites: SensingSite[];
   referenceSpots: ReferenceSpot[];
+  /** Separate from the simulated optical references used by the strip-health demo. */
+  sensorReferences: SensorReferenceSpot[];
 }
 
 export type Health = 'ok' | 'degraded' | 'failed';

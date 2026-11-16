@@ -1,3 +1,4 @@
+import { siteOnTooth, siteTeeth, surfaceOnTooth } from '../domain/sensorLayout';
 import Disclosure from '../components/Disclosure';
 /**
  * Tooth-level monitoring: an occlusal schematic of one tooth with its
@@ -10,8 +11,8 @@ import Svg, { Circle, G, Line, Path, Text as SvgText } from 'react-native-svg';
 import Sparkline from '../components/charts/Sparkline';
 import { Divider, IconButton, Meta, Screen, Section, StatusDot, StatusTag, T } from '../components/ui';
 import { crownFor, SurfaceId } from '../domain/arch';
-import { confidenceOf, siteSeries, SiteResult, surfaceLabel } from '../domain/analysis';
-import { BIOMARKERS, formatValue, Status, STATUS_RANK, unitSuffix } from '../domain/biomarkers';
+import { siteTitle, confidenceOf, siteSeries, SiteResult, surfaceLabel } from '../domain/analysis';
+import { BIOMARKERS, BIOMARKER_COLORS, formatValue, Status, STATUS_RANK, unitSuffix } from '../domain/biomarkers';
 import { parseTooth, retainerTeeth, toothByUniversal, toothNumber } from '../domain/teeth';
 import { useStore } from '../state/store';
 import { STATUS_HEX } from '../three/regions';
@@ -46,14 +47,6 @@ function ToothSchematic({ universal, groups, selected, onSelect }: { universal: 
   const outline = pts.join('') + 'Z';
   // Mesial faces the midline: on the patient's right teeth that is screen-right.
   const mesialRight = t.side === 'right';
-  const pos: Record<SurfaceId, [number, number]> = {
-    buccal: [cx, cy - b * 0.62],
-    lingual: [cx, cy + b * 0.62],
-    mesial: [mesialRight ? cx + a * 0.86 : cx - a * 0.86, cy],
-    distal: [mesialRight ? cx - a * 0.86 : cx + a * 0.86, cy],
-    gingival: [cx, cy - b - 22],
-    occlusal: [cx, cy],
-  };
   const lingualWord = t.arch === 'upper' ? 'PALATAL' : 'LINGUAL';
   const buccalWord = t.position <= 3 ? 'LABIAL' : 'BUCCAL';
 
@@ -75,29 +68,27 @@ function ToothSchematic({ universal, groups, selected, onSelect }: { universal: 
       <SvgText x={12} y={cy + 3} fontSize={10} fill={colors.textMuted} fontFamily={font.family} fontWeight="600" letterSpacing={0.8}>{mesialRight ? 'D' : 'M'}</SvgText>
       <SvgText x={W - 12} y={cy + 3} fontSize={10} fill={colors.textMuted} textAnchor="end" fontFamily={font.family} fontWeight="600" letterSpacing={0.8}>{mesialRight ? 'M' : 'D'}</SvgText>
 
-      {/* gingival margin (buccal side) */}
-      <Path d={`M${cx - a * 0.85},${cy - b * 0.7} Q${cx},${cy - b - 34} ${cx + a * 0.85},${cy - b * 0.7}`} stroke={colors.border} strokeWidth={1} fill="none" strokeDasharray="2 4" />
+      {/* gingival margin (tongue/palate side) */}
+      <Path d={`M${cx - a * 0.85},${cy + b * 0.7} Q${cx},${cy + b + 34} ${cx + a * 0.85},${cy + b * 0.7}`} stroke={colors.border} strokeWidth={1} fill="none" strokeDasharray="2 4" />
       {/* crown */}
       <Path d={outline} fill="#121212" stroke={colors.textSecondary} strokeWidth={1.25} />
       <Path d={detail} stroke={colors.border} strokeWidth={1} fill="none" strokeLinecap="round" />
       <Line x1={cx - a - 10} x2={cx + a + 10} y1={cy} y2={cy} stroke="#1C1C1C" strokeWidth={1} />
 
-      {ORDER.filter((s) => groups.has(s)).map((s) => {
-        const [x, y] = pos[s];
-        const st = worst(groups.get(s)!);
-        const on = selected === s;
-        return (
-          <G key={s} onPress={() => onSelect(s)}>
-            <Circle cx={x} cy={y} r={18} fill="transparent" />
-            <Circle cx={x} cy={y} r={on ? 13 : 11} fill={on ? colors.surfaceRaised : colors.bg} stroke={on ? colors.text : colors.textSecondary} strokeWidth={on ? 1.5 : 1} />
-            {st === 'unavailable' ? (
-              <Circle cx={x} cy={y} r={3.5} fill="none" stroke={colors.textMuted} strokeWidth={1} />
-            ) : (
-              <Circle cx={x} cy={y} r={3.5} fill={STATUS_HEX[st]} />
-            )}
-          </G>
-        );
-      })}
+      {[...groups.entries()].flatMap(([surface, rows]) => rows.map(result => {
+        const site = result.site;
+        const side = surfaceOnTooth(site, universal);
+        const towardsMesial = mesialRight ? 1 : -1;
+        const longitudinal = site.corner ?? site.half ?? (site.contactWith != null ? side : undefined);
+        const sign = longitudinal === 'mesial' ? towardsMesial : longitudinal === 'distal' ? -towardsMesial : 0;
+        const x = cx + sign * a * (site.contactWith != null ? 0.9 : site.corner ? 0.68 : 0.35) - (site.offset?.[0] ?? 0) * towardsMesial * k;
+        const y = cy + (site.face === 'buccal' ? -1 : 1) * b * (site.height === 'gingival-margin' ? 1.12 : site.corner ? 0.68 : 0.55);
+        return <G key={site.id} onPress={() => onSelect(surface)}>
+          <Circle cx={x} cy={y} r={12} fill="transparent" />
+          <Circle cx={x} cy={y} r={selected === surface ? 6 : 4.5} fill={BIOMARKER_COLORS[site.biomarker]} stroke={selected === surface ? colors.text : colors.bg} strokeWidth={1} />
+        </G>;
+      }))}
+
     </Svg>
   );
 }
@@ -115,10 +106,10 @@ export default function Tooth() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tooth]);
 
-  const results = (analysis?.results ?? []).filter((r) => r.site.toothUniversal === tooth);
+  const results = (analysis?.results ?? []).filter((r) => siteOnTooth(r.site, tooth));
   const groups = useMemo(() => {
     const m = new Map<SurfaceId, SiteResult[]>();
-    results.forEach((r) => m.set(r.site.surface, [...(m.get(r.site.surface) ?? []), r]));
+    results.forEach((r) => { const surface = surfaceOnTooth(r.site, tooth); m.set(surface, [...(m.get(surface) ?? []), r]); });
     m.forEach((rs) => rs.sort((x, y) => STATUS_RANK[y.status] - STATUS_RANK[x.status]));
     return m;
   }, [results]);
@@ -128,8 +119,10 @@ export default function Tooth() {
   const teeth = retainerTeeth(t.arch).slice().sort((x, y) => x.universal - y.universal);
   const statusByTooth = new Map<number, Status>();
   (analysis?.results ?? []).forEach((r) => {
-    const prev = statusByTooth.get(r.site.toothUniversal);
-    if (!prev || STATUS_RANK[r.status] > STATUS_RANK[prev]) statusByTooth.set(r.site.toothUniversal, r.status);
+    for (const u of siteTeeth(r.site)) {
+      const prev = statusByTooth.get(u);
+      if (!prev || STATUS_RANK[r.status] > STATUS_RANK[prev]) statusByTooth.set(u, r.status);
+    }
   });
 
   return (
@@ -201,13 +194,13 @@ export default function Tooth() {
               return (
                 <View key={r.site.id} style={[styles.reading, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}>
                   <View style={{ flex: 1 }}>
-                    <T v="small" style={{ color: colors.textSecondary }}>{b.name}</T>
+                    <T v="small" style={{ color: colors.textSecondary }}>{b.name} · {siteTitle(r.site, numbering).number} · {siteTitle(r.site, numbering).surface}</T>
                     <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 4 }}>
                       <T v="number" style={{ fontSize: 26 }}>{formatValue(b, r.reading.value)}</T>
-                      <T v="small" style={{ marginLeft: 4, color: colors.textSecondary }}>{unitSuffix(b).trim() || 'pH'}</T>
+                      <T v="small" style={{ marginLeft: 4, color: colors.textSecondary }}>{b.unit === 'pH' ? 'pH' : unitSuffix(b).trim()}</T>
                     </View>
                     <View style={{ marginTop: 6 }}>
-                      <StatusTag status={r.status} label={r.status === 'unavailable' ? 'Not measured' : r.status === 'normal' ? 'In range' : b.statusWords[r.status]} />
+                      <StatusTag status={r.status} label={b.bands.configured === false ? 'Not calibrated' : r.status === 'unavailable' ? 'Not measured' : r.status === 'normal' ? 'In range' : b.statusWords[r.status]} />
                     </View>
 
                   </View>
@@ -224,6 +217,8 @@ export default function Tooth() {
           </Pressable>
         </Section>
       ) : null}
+
+      {analysis?.strip.sensorReferences.some(reference => reference.toothUniversal === tooth) ? <Section title="Reference spots"><View style={styles.panel}>{analysis.strip.sensorReferences.filter(reference => reference.toothUniversal === tooth).map(reference => <View key={reference.id} style={{ padding: space.md }}><T v="bodyStrong">{reference.label}</T><T v="body">{reference.purpose === 'potassium-compensation' ? 'Potassium compensation · not an ammonia measurement' : 'Background signal · no capture layer'}</T></View>)}</View></Section> : null}
 
       {/* All locations summary */}
       {surfaces.length > 1 ? (

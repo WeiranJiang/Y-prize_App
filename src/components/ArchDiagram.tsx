@@ -4,19 +4,26 @@ import Svg, { Circle, G, Path, Text as SvgText } from 'react-native-svg';
 import { archFrames, crownFor } from '../domain/arch';
 import { Arch, NumberingSystem } from '../domain/teeth';
 import { toothShape } from '../domain/toothShape';
+import { sensorAnchor } from '../domain/sensorGeometry';
+import { BIOMARKER_COLORS } from '../domain/biomarkers';
+import type { SensingSite, SensorReferenceSpot } from '../domain/types';
 import { colors, font } from '../theme/tokens';
 
 /** Occlusal (top-down) arch map. Tap a tooth to select it. */
 export default function ArchDiagram({
-  marks,
+  marks = new Map(),
   selected,
   onSelect,
   numbering,
   arch = 'upper',
+  sites,
+  references = [],
 }: {
   arch?: Arch;
+  sites?: SensingSite[];
+  references?: SensorReferenceSpot[];
   /** Teeth to mark: colour of the most concerning reading; dashed = configured but unmeasured. */
-  marks: Map<number, { color: string; dashed?: boolean }>;
+  marks?: Map<number, { color: string; dashed?: boolean }>;
   selected: number | null;
   onSelect: (u: number) => void;
   numbering: NumberingSystem;
@@ -44,6 +51,15 @@ export default function ArchDiagram({
   const toX = (x: number) => cx + (x - (minX + maxX) / 2) * s;
   const toY = (z: number) => H / 2 + (flip ? 1 : -1) * (z - midZ) * s;
 
+  // A top-down chart projects crown height away. Stack concentric filled markers
+  // at coincident contacts so Ca/pH/aMMP-8 remain visible without moving the site.
+  const markerGroups = new Map<string, { site: SensingSite; p: [number, number, number] }[]>();
+  for (const site of sites ?? []) {
+    const { p } = sensorAnchor(site);
+    const key = `${p[0].toFixed(3)}:${p[2].toFixed(3)}`;
+    markerGroups.set(key, [...(markerGroups.get(key) ?? []), { site, p }]);
+  }
+
   return (
     <View style={{ height: H }} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
       {w > 0 && (
@@ -51,7 +67,7 @@ export default function ArchDiagram({
           {frames.map((f) => {
             const u = f.tooth.universal;
             const c = crownFor(arch, f.tooth.position);
-            const m = marks.get(u);
+            const m = sites ? undefined : marks.get(u);
             const on = selected === u;
             const rx = (c.w / 2) * s * 0.92;
             const ry = (c.b / 2) * s * 0.85;
@@ -77,6 +93,13 @@ export default function ArchDiagram({
                 </SvgText>
               </G>
             );
+          })}
+          {[...markerGroups.entries()].map(([key, group]) => <G key={key}>
+            {group.slice().reverse().map(({ site, p }, index) => <Circle key={site.id} cx={toX(p[0])} cy={toY(p[2])} r={2.2 + (group.length - 1 - index) * 1.6} fill={BIOMARKER_COLORS[site.biomarker]} stroke={colors.bg} strokeWidth={0.5} onPress={() => onSelect(site.toothUniversal)} />)}
+          </G>)}
+          {references.map(reference => {
+            const { p } = sensorAnchor(reference);
+            return <Circle key={reference.id} cx={toX(p[0])} cy={toY(p[2])} r={2.8} fill="none" stroke={BIOMARKER_COLORS[reference.biomarker]} strokeWidth={1.2} onPress={() => onSelect(reference.toothUniversal)} />;
           })}
           <SvgText x={cx} y={flip ? 34 : H - 30} fontSize={9.5} textAnchor="middle" fill={colors.textMuted} fontFamily={font.family} fontWeight="500" letterSpacing={1}>
             {flip ? 'LOWER ARCH' : 'UPPER ARCH'}

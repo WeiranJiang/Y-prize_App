@@ -40,15 +40,15 @@ The app sends the question, recent turns and a compact, de-identified summary of
 
 ## Design system (`src/theme/tokens.ts`, `src/components/ui.tsx`)
 
-Neutral, clinical dark UI: background `#0A0A0A`, surfaces `#141414` / `#1A1A1A` / `#242424`, borders `#303030`, text `#F5F5F5` / `#989898` / `#696969`. Colour is reserved for medical status and always paired with a label: green `#39A76D` (in range), amber `#D6A34A` (borderline), red `#E05252` (needs attention). SF Pro (system font) with tabular numbers. 8-pt spacing, 12–18px radii, flat surfaces, no shadows. Primary buttons are white with black text, and selection controls are iOS-style segmented controls. Charts use thin white lines, status-coloured markers, a shaded research range and touch-to-inspect.
+Neutral, clinical dark UI: background `#0A0A0A`, surfaces `#141414` / `#1A1A1A` / `#242424`, borders `#303030`, text `#F5F5F5` / `#989898` / `#696969`. Sensor colours identify chemistry; status colours are paired with a reading label: green `#39A76D` (in range), amber `#D6A34A` (borderline), red `#E05252` (needs attention). SF Pro (system font) with tabular numbers. 8-pt spacing, 12–18px radii, flat surfaces, no shadows. Primary buttons are white with black text, and selection controls are iOS-style segmented controls. Charts use thin white lines, status-coloured markers, a shaded research range and touch-to-inspect.
 
 Key screens: Home dashboard, `/biomarker?id=` (biomarker detail with 1D/7D/30D/90D history and per-location list), `/tooth?u=` (tooth-level schematic with measurement locations and readings).
 
 ## Arches and biomarkers
 
-Both upper and lower retainers carry a strip (28 and 15 sensing sites in the demo). The Upper/Lower toggle is global: every screen follows it, and one case readout scans both strips.
+The upper retainer has 78 measurement sensors plus 2 chemical reference spots; the lower has 80 plus 2. The Upper/Lower toggle is global: every screen follows it, and one case readout scans both strips.
 
-On the 3D map **only readings that need attention are coloured**: amber for borderline, red for needs attention. In-range sites stay plain white dots. Withheld readings get a gray ring, so "not measured" is never mistaken for "healthy". Biomarker identity is given by name, never by colour.
+The main 3D and tooth-chart maps identify sensor chemistry: **pink ammonia, green pH, blue calcium, yellow fluoride, purple aMMP-8**. Hollow rings identify chemical reference spots. These colours do not encode health status; reading labels and status badges do.
 
 ## Biofouling & strip replacement (`src/domain/fouling.ts`)
 
@@ -66,11 +66,11 @@ Rule-based (R1–R8). Each insight records its rule, biomarker, sites, threshold
 
 ## 3D (`src/three/`)
 
-`retainerGeometry.ts` builds ~24k points procedurally from anatomical crown dimensions along a parabolic arch: superellipse cross-sections, cusps, incisal edges and a scalloped gingival skirt. `regions.ts` colours only each sensor's measured footprint, with a soft fall-off and a dotted boundary ring. Withheld sites are slate, never "healthy". `RetainerView.tsx` handles drag rotation with inertia, pinch and wheel zoom, double-tap reset, tap picking, camera focus, the floating label and shared cameras for comparisons.
+`retainerGeometry.ts` builds ~24k points procedurally from anatomical crown dimensions along a parabolic arch: superellipse cross-sections, cusps, incisal edges and a scalloped gingival skirt. `regions.ts` colours only each sensor's measured footprint, with a soft fall-off and a dotted boundary ring. Uncalibrated sensors still have mapped locations, without clinical values. `RetainerView.tsx` handles drag rotation with inertia, pinch and wheel zoom, double-tap reset, tap picking, camera focus, the floating label and shared cameras for comparisons.
 
 ## Extending to new biomarkers
 
-Add or enable an entry in `src/domain/biomarkers.ts` (units, bands, limitation text) and list it in a strip's `supported` array. Modes, legends, trends and rules key off the registry. aMMP-8 is intentionally excluded.
+Add or enable an entry in `src/domain/biomarkers.ts` (units, bands, limitation text) and list it in a strip's `supported` array. Modes, legends, trends and rules key off the registry. aMMP-8 locations are included, with calibration deliberately unconfigured.
 
 ### Ask security and deployment
 
@@ -101,3 +101,13 @@ The Log tab saves a short food/drink name, approximate eating/sipping duration, 
 The web demo needs **no API key**: meal-photo suggestions use an on-demand MobileNet classifier, and nutrition-label photos use Tesseract OCR in the browser. Readers load on demand; the OCR worker, English language data and engine are bundled as self-hosted assets during the web build, while meal model weights download from TensorFlow Hub. Images are not uploaded. Meal identification is limited to recognizable food classes, not a full meal/ingredient analysis; unknown or low-confidence results ask the user to type a name. Sugar, actual acidity and hidden ingredients cannot be established from appearance. Label extraction reads explicit sugar/acid-ingredient evidence and always requires user review. This does not establish measured pH or diagnose tooth damage.
 
 Camera capture and gallery selection work with the browser/OS photo picker. On desktop, Take photo may open the file chooser when no camera capture picker is available. Native builds support manual logging and image selection, but automatic photo suggestions currently run in the web demo only. The image-picker config plugin disables microphone permission and supplies camera/photo permission descriptions.
+
+## Sensor placement specification
+
+`src/domain/sensorLayout.ts` is the single source of truth for the supplied Universal-number table. It includes 8 ammonia, 6 pH, 16 calcium, 112 fluoride and 16 aMMP-8 measurement sites, plus 2 K⁺ and 2 aMMP-8 background references: **162 physical SPOTs**. No wisdom teeth are covered. Every covered tooth has all four fluoride corners. Shared contact sites are stored once and associated with both neighbours. A contact is mesial/distal relative to the tooth being viewed, not assigned to a second independent reading.
+
+`src/domain/sensorGeometry.ts` places chemical and contact sensors at mid-crown; aMMP-8 and its background references are at the palatal/lingual gum margin, above the gum line. Small within-zone offsets separate adjacent chips at shared locations; marker sizes and the tooth geometry are schematic, not manufacturing CAD dimensions. Coincident sites at different crown heights use concentric filled markers in the top-down chart; the 3D view retains their distinct heights. Exact surface names and contact pairs are retained in site labels and the editable CSV at `docs/sensor-layout.csv`.
+
+aMMP-8 has no invented unit, numerical reading, range or clinical classification. It is shown as **Not calibrated** and excluded from signal-failure/strip-usability conclusions. Existing pH/mineral/ammonia demo values remain simulated. The older optical clarity controls are internal synthetic inputs to strip-health forecasting; they are not counted or rendered as extra hardware SPOTs and are separate from the four specified chemical references. No potassium/background correction is claimed without actual calibration data.
+
+Verify mapping with `server/node_modules/.bin/tsx --test server/sensorLayout.test.ts`.

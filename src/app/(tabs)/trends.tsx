@@ -1,3 +1,4 @@
+import { siteOnTooth } from '../../domain/sensorLayout';
 /**
  * Findings: pick biomarkers and drag a time range; the arch map, findings
  * list and tooth charts all follow the selected window.
@@ -5,13 +6,14 @@
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import BiomarkerLegend from '../../components/BiomarkerLegend';
 import Disclosure from '../../components/Disclosure';
 import ArchDiagram from '../../components/ArchDiagram';
 import ArchToggle from '../../components/ArchToggle';
 import LineChart, { LPoint } from '../../components/charts/LineChart';
 import Icon from '../../components/Icon';
 import RangeSlider from '../../components/RangeSlider';
-import { Button, Legend, Meta, Screen, Section, StatusDot, StatusTag, T } from '../../components/ui';
+import { Button, Meta, Screen, Section, StatusDot, StatusTag, T } from '../../components/ui';
 import { analyzeScan, siteSeries, siteTitle } from '../../domain/analysis';
 import { BIOMARKER_ORDER, BIOMARKERS, BiomarkerId, classify, formatDelta, formatValue, Status, STATUS_RANK, unitSuffix } from '../../domain/biomarkers';
 import { parseTooth, toothByUniversal, toothNumber } from '../../domain/teeth';
@@ -35,7 +37,7 @@ export default function Findings() {
   const params = useLocalSearchParams<{ tooth?: string; bio?: string }>();
   const { state, arch, setArch, stripById } = useStore();
   const numbering = state.settings.numbering;
-  const [bios, setBios] = useState<BiomarkerId[]>(['pH', 'lactate', 'calcium']);
+  const [bios, setBios] = useState<BiomarkerId[]>(['pH', 'calcium', 'ammonium']);
   const [showAll, setShowAll] = useState(false);
   const [tooth, setTooth] = useState<number | null>(parseTooth(params.tooth));
 
@@ -70,17 +72,6 @@ export default function Findings() {
   // State at the end of the window drives the map.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const endAnalysis = useMemo(() => (endScan && endStrip ? analyzeScan(endScan, endStrip, []) : undefined), [endScan, endStrip, state.rev]);
-  const marks = useMemo(() => {
-    const m = new Map<number, { rank: number; color: string; dashed?: boolean }>();
-    endAnalysis?.results.forEach((r) => {
-      if (!bios.includes(r.site.biomarker)) return;
-      const rank = STATUS_RANK[r.status];
-      const prev = m.get(r.site.toothUniversal);
-      if (!prev || rank > prev.rank) m.set(r.site.toothUniversal, { rank, color: STATUS_HEX[r.status], dashed: r.status === 'unavailable' });
-    });
-    return m;
-  }, [endAnalysis, bios]);
-
   // Findings within the window: any site that crossed a threshold for the chosen biomarkers.
   const sites = endStrip ? endStrip.sites.filter((s) => bios.includes(s.biomarker)) : [];
   const findings = sites
@@ -107,7 +98,7 @@ export default function Findings() {
   const xd: [number, number] = x1 - x0 < 3600000 ? [x0 - 6 * 3600000, x1 + 6 * 3600000] : [x0, x1];
   const selTooth = tooth != null && toothByUniversal(tooth).arch === arch ? tooth : null;
 
-  const measuredBios = bios.filter(id => endStrip?.sites.some(site => site.toothUniversal === selTooth && site.biomarker === id));
+  const measuredBios = bios.filter(id => endStrip?.sites.some(site => siteOnTooth(site, selTooth) && site.biomarker === id));
 
   return (
     <Screen>
@@ -167,9 +158,9 @@ export default function Findings() {
       <Section title={`Teeth on ${endScan ? fmtDay(endScan.at) : '—'}`} action={<ArchToggle onChange={() => setTooth(null)} />}>
         <View style={styles.panel}>
           <View style={{ paddingHorizontal: 6, paddingTop: space.sm }}>
-            <ArchDiagram key={arch} arch={arch} marks={marks} selected={selTooth} onSelect={setTooth} numbering={numbering} />
+            <ArchDiagram key={arch} arch={arch} sites={endStrip?.sites.filter(site => bios.includes(site.biomarker))} references={endStrip?.sensorReferences.filter(site => bios.includes(site.biomarker))} selected={selTooth} onSelect={setTooth} numbering={numbering} />
           </View>
-          <View style={{ paddingBottom: space.md }}><Legend /></View>
+          <View style={{ paddingBottom: space.md }}><BiomarkerLegend only={bios} /></View>
         </View>
       </Section>
 
@@ -180,7 +171,8 @@ export default function Findings() {
             {!measuredBios.length ? <View style={[styles.panel, { padding: space.lg }]}><T v="body">No sensors for the selected measurements on this tooth. Choose another tooth or change Measurements above.</T></View> : null}
             {measuredBios.map((id) => {
               const b = BIOMARKERS[id];
-              const tSites = (endStrip?.sites ?? []).filter((s) => s.toothUniversal === selTooth && s.biomarker === id);
+              const tSites = (endStrip?.sites ?? []).filter((s) => siteOnTooth(s, selTooth) && s.biomarker === id);
+              if (b.bands.configured === false) return <View key={id} style={[styles.panel, { padding: space.lg }]}><T v="bodyStrong">{b.shortName}</T><T v="body">{tSites.length} sensor location{tSites.length === 1 ? '' : 's'} · not calibrated</T></View>;
               const series = tSites.map((s, k) => ({
                 id: s.id,
                 label: siteTitle(s, numbering).surface,
@@ -256,7 +248,7 @@ export default function Findings() {
           {findings.length === 0 ? (
             <View style={{ padding: space.lg, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <StatusDot status="normal" />
-              <T v="small" style={{ color: colors.text }}>{!endAnalysis || !sites.length ? 'No readings for these filters' : 'No flagged readings in the available scans'}</T>
+              <T v="small" style={{ color: colors.text }}>{!endAnalysis || !sites.length ? 'No readings for these filters' : sites.every(site => BIOMARKERS[site.biomarker].bands.configured === false) ? 'Locations configured; no calibrated readings yet' : 'No flagged readings in the available scans'}</T>
             </View>
           ) : (
             (showAll ? findings : findings.slice(0, 5)).map((f, i) => {

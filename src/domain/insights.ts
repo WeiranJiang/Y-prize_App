@@ -53,19 +53,12 @@ export const COPY: Record<BiomarkerId, { finding: string; repeated: string; inte
   pH: {
     finding: 'Elevated acidity detected',
     repeated: 'Repeated low pH',
-    interpret: 'The local environment at this measured location has been more acidic than the comparison site across recent scans. This can accompany plaque that is actively producing acid, but a pH reading alone does not show that a cavity is forming.',
+    interpret: 'The pH at this measured location has repeatedly been below the configured research range. This describes acidity, not tooth damage, and does not diagnose a cavity.',
     single: 'A single low reading can reflect a recent meal or drink, or local plaque. One scan is not enough to identify a pattern.',
     advice: (i) => (i ? 'Give extra attention to cleaning between these teeth (floss or an interdental brush), and mention the recurring readings at your next dental visit.' : 'Brush this area carefully along the gumline, and mention the recurring readings at your next dental visit.'),
     rec: 'Spend extra attention flossing between the highlighted',
   },
-  lactate: {
-    finding: 'Raised lactate detected',
-    repeated: 'Repeated raised lactate',
-    interpret: 'Lactate is produced when plaque bacteria ferment sugars. Higher local lactate suggests more acid-producing activity at this spot. It does not show damage to the tooth.',
-    single: 'Lactate rises briefly after sugary food or drink. One raised reading is not a pattern.',
-    advice: (i) => `Reduce how often you have sugary snacks and drinks between meals, and clean ${i ? 'between these teeth' : 'this area'} thoroughly.`,
-    rec: 'Cut down on between-meal sugars and clean around the highlighted',
-  },
+
   calcium: {
     finding: 'Low calcium detected',
     repeated: 'Repeatedly low calcium',
@@ -74,14 +67,7 @@ export const COPY: Record<BiomarkerId, { finding: string; repeated: string; inte
     advice: () => 'Use a fluoride toothpaste twice daily and spit, don\'t rinse, after brushing. Ask your dentist whether a remineralising product suits you.',
     rec: 'Spit, don\'t rinse, after brushing near the highlighted',
   },
-  phosphate: {
-    finding: 'Low phosphate detected',
-    repeated: 'Repeatedly low phosphate',
-    interpret: 'Phosphate works with calcium to help enamel repair. Lower local phosphate means less mineral available at this spot. It is not a diagnosis.',
-    single: 'Phosphate varies with saliva and diet. One low reading is not a pattern.',
-    advice: () => 'Keep up fluoride toothpaste twice daily and stay well hydrated. Mention persistent readings to your dentist.',
-    rec: 'Stay hydrated and keep your fluoride routine for the highlighted',
-  },
+
   fluoride: {
     finding: 'Low fluoride detected',
     repeated: 'Repeatedly low fluoride',
@@ -91,12 +77,19 @@ export const COPY: Record<BiomarkerId, { finding: string; repeated: string; inte
     rec: 'Spit, don\'t rinse, after fluoride brushing near the highlighted',
   },
   ammonium: {
-    finding: 'Low ammonium detected',
-    repeated: 'Repeatedly low ammonium',
+    finding: 'Low ammonia detected',
+    repeated: 'Repeatedly low ammonia',
     interpret: 'Ammonium helps neutralise acid locally. Lower levels mean less natural buffering at this spot. It is a research indicator only.',
     single: 'Ammonium varies with diet and saliva. One low reading is not a pattern.',
     advice: () => 'Stay hydrated and keep your usual cleaning routine; mention persistent readings to your dentist.',
     rec: 'Stay hydrated and keep cleaning the highlighted',
+  },
+  aMMP8: {
+    finding: 'aMMP-8 sensor configured', repeated: 'aMMP-8 sensor configured',
+    interpret: 'This sensor samples gingival crevicular fluid at the gum margin. No calibrated value or clinical threshold is available.',
+    single: 'No calibrated aMMP-8 result is available.',
+    advice: () => 'Continue your usual oral-care routine; discuss persistent bleeding or swelling with a dentist.',
+    rec: 'Review persistent symptoms with your dentist',
   },
 };
 
@@ -171,7 +164,7 @@ export function buildInsights(
   }
 
   // Rule R3 — withheld readings (quality gating)
-  if (a.withheld.length) {
+  if (a.withheld.filter(r => BIOMARKERS[r.site.biomarker].bands.configured !== false).length) {
     const fouling = health && (health.state === 'soon' || health.state === 'now');
     const names = a.withheld.map((r) => {
       const t = siteTitle(r.site, system);

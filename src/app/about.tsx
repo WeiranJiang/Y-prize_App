@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import React from 'react';
 import { View } from 'react-native';
+import BiomarkerLegend from '../components/BiomarkerLegend';
 import { Card, IconButton, Legend, Screen, Section, T } from '../components/ui';
 import { BIOMARKER_ORDER, BIOMARKERS } from '../domain/biomarkers';
 import { colors, space } from '../theme/tokens';
@@ -40,11 +41,11 @@ export default function About() {
 
       <Section title="What the map shows">
         <T v="body">
-          On the 3D map, coloured areas cover only the footprint each sensor samples. Areas between sensors stay neutral; they are not estimated. The tooth chart summarises available readings for each monitored tooth. Grey or dashed markers indicate a reading was not measured reliably—not that the tooth is healthy.
+          The colours identify sensor types and locations: pink ammonia, green pH, blue calcium, yellow fluoride and purple aMMP-8. Hollow rings mark reference spots. A contact sensor belongs to both neighbouring teeth but is counted once. aMMP-8 sensors sit against the tongue- or palate-side gum margin, never under the gum. Reading status is shown separately; sensor colour is not a health rating.
         </T>
       </Section>
 
-      <View style={{ marginTop: space.md }}><Legend /></View>
+      <View style={{ marginTop: space.md }}><BiomarkerLegend /></View>
 
       <Section title="Reading the bigger picture">
         <Card>
@@ -53,7 +54,7 @@ export default function About() {
           <T v="bodyStrong" style={{ marginTop: space.lg }}>Patterns matter more than a single number</T>
           <T v="small" style={{ marginTop: 4 }}>Meals, drinks, readout timing and strip condition can affect results. Findings lets you compare the same location over time. Overview’s activity calendar shows when sessions were recorded, not whether your teeth were healthy that day.</T>
           <T v="bodyStrong" style={{ marginTop: space.lg }}>Strip clarity is a separate signal</T>
-          <T v="small" style={{ marginTop: 4 }}>Reference spots help track film on the strip. As clarity falls, readings can become less reliable. Results below the signal-quality floor are withheld rather than guessed; the Strips tab explains replacement timing.</T>
+          <T v="small" style={{ marginTop: 4 }}>The demo models strip clarity separately from the K⁺ and aMMP-8 chemical reference spots. As clarity falls, readings can become less reliable. Results below the signal-quality floor are withheld rather than guessed; the Strips tab explains replacement timing.</T>
         </Card>
       </Section>
 
@@ -68,7 +69,7 @@ export default function About() {
           );
         })}
         <T v="small" style={{ color: colors.textMuted }}>
-          Localised pH, lactate and mineral-ion measurements are research indicators. They do not independently diagnose dental decay or gum disease. Talk to a dental professional about any persistent finding, pain, sensitivity or bleeding.
+          Localised pH, ammonia, calcium, fluoride and aMMP-8 measurements are research indicators. They do not independently diagnose dental decay or gum disease. Talk to a dental professional about any persistent finding, pain, sensitivity or bleeding.
         </T>
       </Section>
     </Screen>

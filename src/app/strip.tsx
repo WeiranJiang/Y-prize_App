@@ -8,6 +8,7 @@ import { replaceEta } from '../components/StripHealthCard';
 import ArchToggle from '../components/ArchToggle';
 import { Button, Card, Divider, IconButton, KV, Legend, Meter, Screen, Section, StatusDot, T } from '../components/ui';
 import { siteTitle } from '../domain/analysis';
+import { toothNumber, toothByUniversal } from '../domain/teeth';
 import { Status } from '../domain/biomarkers';
 import { computeStripHealth, pct, STATE_COLOR_KEY } from '../domain/fouling';
 import { useStore } from '../state/store';
@@ -177,18 +178,7 @@ export default function StripHealth() {
         <Section>
           <Disclosure title="Reference spots">
           <Card style={{ paddingVertical: 6 }}>
-            {strip.referenceSpots.map((spot, i) => {
-              const v = latest?.references.find((r) => r.spotId === spot.id)?.transmission;
-              return (
-                <View key={spot.id} style={{ paddingVertical: 12, borderTopWidth: i ? StyleSheet.hairlineWidth : 0, borderTopColor: colors.hairline }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <T v="small" style={{ color: colors.text }}>{spot.id} · {spot.label}</T>
-                    <T v="small" style={{ color: colors.text }}>{v != null ? pct(v) : '—'}</T>
-                  </View>
-                  <Meter value={v ?? 0} status={v == null ? 'unavailable' : tStatus(v, true)} marks={[L.clarityReplace]} />
-                </View>
-              );
-            })}
+            {strip.sensorReferences.map(reference => <View key={reference.id} style={{ paddingVertical: space.md }}><T v="bodyStrong">{reference.label}</T><T v="body">{toothNumber(toothByUniversal(reference.toothUniversal), state.settings.numbering)} · {reference.height === 'gingival-margin' ? 'palatal/lingual gum margin' : 'palatal/lingual mid-crown'}</T></View>)}
           </Card>
           </Disclosure>
         </Section>

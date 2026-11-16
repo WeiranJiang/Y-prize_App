@@ -1,3 +1,4 @@
+import { siteOnTooth, siteTeeth } from './sensorLayout';
 /**
  * OraCare assistant. A friendly, plain-spoken guide that answers questions about
  * the user's own readings, and general oral-health questions, tying answers
@@ -57,11 +58,10 @@ export interface Reply {
 
 const BIO_WORDS: [RegExp, BiomarkerId][] = [
   [/\b(ph|acid|acidic|acidity)\b/, 'pH'],
-  [/\b(lactate|lactic)/, 'lactate'],
   [/\bcalcium\b/, 'calcium'],
-  [/\bphosphate\b/, 'phosphate'],
   [/\bfluorid/, 'fluoride'],
   [/\bammoni/, 'ammonium'],
+  [/ammp[- ]?8|mmp[- ]?8/, 'aMMP8'],
 ];
 
 const has = (q: string, re: RegExp) => re.test(q);
@@ -107,7 +107,7 @@ const listJoin = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0
 
 function word(r: SiteResult) {
   const b = BIOMARKERS[r.site.biomarker];
-  return r.status === 'normal' ? 'in range' : r.status === 'unavailable' ? 'not measured' : lowerFirst(b.statusWords[r.status]);
+  return r.status === 'normal' ? 'in range' : r.status === 'unavailable' ? b.bands.configured === false ? 'not calibrated' : 'not measured' : lowerFirst(b.statusWords[r.status]);
 }
 /** "pH has fallen from 6.3 to 5.4 over the last two weeks" */
 function trendSentence(r: SiteResult, ctx: AssistantContext): string | null {
@@ -157,10 +157,10 @@ function overall(ctx: AssistantContext, q: string): Reply {
   let text = `${opener} About ${o.overall != null ? Math.round(o.overall * 100) : '—'}% of your readings are in range, and things are ${dir}.`;
   if (teeth.length) {
     const t = toothByUniversal(teeth[0]);
-    const here = c.filter((r) => r.site.toothUniversal === teeth[0]);
+    const here = c.filter((r) => siteOnTooth(r.site, teeth[0]));
     const kinds = new Set(here.map((r) => r.site.biomarker));
     text += `\n\nThe spot I’d keep an eye on is your ${lowerFirst(t.name)} (${toothNumber(t, ctx.numbering)}), which shows ${listJoin(here.map(phrase))}.`;
-    if (kinds.has('pH') && (kinds.has('lactate') || kinds.has('calcium'))) text += ' When those show up together, it usually means plaque has been sitting there and fermenting sugars.';
+    if (kinds.has('pH') && kinds.has('calcium')) text += ' Together, they describe an acidic environment with less available calcium; they do not establish a cause or diagnose damage.';
     if (teeth.length > 1) text += ` ${teeth.length - 1 === 1 ? 'One other tooth has' : `${teeth.length - 1} other teeth have`} something worth a look too.`;
   } else text += `\n\nNothing is past a concern threshold right now. Nice work.`;
   return { text, suggestions: teeth.length ? [`Tell me about tooth #${teeth[0]}`, 'What should I do this week?', 'What’s changed recently?'] : ['What should I do this week?'], topic: teeth.length ? { tooth: teeth[0] } : undefined };
@@ -186,7 +186,7 @@ function attention(ctx: AssistantContext): Reply {
 function tooth(ctx: AssistantContext, u: number): Reply {
   const t = toothByUniversal(u);
   const snap = ctx.arches.find((a) => a.arch === t.arch);
-  const rows = (snap?.analysis?.results ?? []).filter((r) => r.site.toothUniversal === u).sort((a, b) => STATUS_RANK[b.status] - STATUS_RANK[a.status]);
+  const rows = (snap?.analysis?.results ?? []).filter((r) => siteOnTooth(r.site, u)).sort((a, b) => STATUS_RANK[b.status] - STATUS_RANK[a.status]);
   if (!rows.length)
     return { text: `There isn’t a sensor on your ${lowerFirst(t.name)} (${toothNumber(t, ctx.numbering)}), so I don’t have readings for it. I won’t guess from neighbouring teeth, because conditions can differ a lot from one spot to the next.`, topic: { tooth: u } };
   const bad = rows.filter((r) => STATUS_RANK[r.status] >= 1);
@@ -195,12 +195,13 @@ function tooth(ctx: AssistantContext, u: number): Reply {
   const tr = bad.length ? trendSentence(bad[0], ctx) : null;
   if (tr) text += `\n\n${tr}.`;
   if (bad.length >= 2) text += ` Several markers point the same way here, which makes it more likely to be a real local pattern than a one-off blip.`;
-  text += bad.length ? `\n\nWhat I’d do: ${COPY[bad[0].site.biomarker].advice(interdental(bad[0]))}` : `\n\nEverything here is in range. Nothing to change.`;
+  text += bad.length ? `\n\nWhat I’d do: ${COPY[bad[0].site.biomarker].advice(interdental(bad[0]))}` : `\n\nThe available readings are in range. aMMP-8 remains uncalibrated; this does not rule out a dental problem.`;
   return { text, suggestions: bad.length ? ['Why is this happening?', 'How has it changed?', 'How do I floss properly?'] : ['How are my teeth overall?'], topic: { tooth: u, bio: bad[0]?.site.biomarker } };
 }
 
 function biomarker(ctx: AssistantContext, bio: BiomarkerId): Reply {
   const b = BIOMARKERS[bio];
+  if (b.bands.configured === false) return { text: 'aMMP-8 has 16 mapped sensor locations at the tongue- or palate-side gum margin, plus two background references. Calibrated values and clinical thresholds have not been supplied, so I can explain the placement but can’t interpret an aMMP-8 result.', topic: { bio } };
   const sum = ctx.overview.biomarkers.find((x) => x.id === bio);
   const c = concerns(ctx, bio, 1);
   const trend = sum?.direction === 'improving' ? 'it’s improving' : sum?.direction === 'worsening' ? 'it’s been heading the wrong way lately' : 'it’s been steady';
@@ -212,7 +213,7 @@ function biomarker(ctx: AssistantContext, bio: BiomarkerId): Reply {
 
 function changes(ctx: AssistantContext, topic?: Topic): Reply {
   if (topic?.tooth) {
-    const rows = results(ctx).filter((r) => r.site.toothUniversal === topic.tooth);
+    const rows = results(ctx).filter((r) => siteOnTooth(r.site, topic.tooth));
     const lines = rows.map((r) => trendSentence(r, ctx)).filter(Boolean) as string[];
     const t = toothByUniversal(topic.tooth);
     return {
@@ -230,18 +231,17 @@ function changes(ctx: AssistantContext, topic?: Topic): Reply {
 
 const WHY: Record<BiomarkerId, string> = {
   pH: 'That spot is more acidic than the rest of your mouth. Bacteria in plaque turn sugars and starches into acid, and in a tucked-away spot, like between back teeth, that acid lingers because saliva can’t easily wash it out.',
-  lactate: 'Lactate is the acid plaque bacteria make when they ferment sugar. A high reading means bacteria at that spot have been busy, usually because plaque has built up there and sugar reaches it often.',
   calcium: 'Enamel constantly loses and regains minerals. When a spot stays acidic, less free calcium is left over to rebuild it, so low calcium often follows low pH.',
-  phosphate: 'Phosphate is the other half of enamel’s repair kit, alongside calcium. It dips when acid lingers or saliva flow is low.',
   fluoride: 'Fluoride levels naturally fall in the hours after brushing. Low readings usually just mean it’s been a while since fluoride toothpaste, or you rinsed it away.',
   ammonium: 'Some bacteria make ammonium, which neutralises acid. Lower levels mean a little less natural buffering, often linked to diet or saliva flow.',
+  aMMP8: 'aMMP-8 is mapped to the lingual or palatal gum margin. Calibrated values and clinical thresholds have not been provided, so no result or diagnosis is inferred.',
 };
 
 function explain(ctx: AssistantContext, topic?: Topic): Reply {
-  const bio = topic?.bio ?? (topic?.tooth ? concerns(ctx, undefined, 1).find((r) => r.site.toothUniversal === topic.tooth)?.site.biomarker : undefined);
+  const bio = topic?.bio ?? (topic?.tooth ? concerns(ctx, undefined, 1).find((r) => siteOnTooth(r.site, topic.tooth))?.site.biomarker : undefined);
   if (bio) {
     const together =
-      topic?.tooth && concerns(ctx, undefined, 1).filter((r) => r.site.toothUniversal === topic.tooth).length > 1
+      topic?.tooth && concerns(ctx, undefined, 1).filter((r) => siteOnTooth(r.site, topic.tooth)).length > 1
         ? ' Here several markers are off at once, which fits that picture: acid being made, sitting there, and minerals being drawn down.'
         : '';
     return {
@@ -261,8 +261,8 @@ function plan(ctx: AssistantContext): Reply {
   const recs = ctx.arches.flatMap((a) => a.recommendations).filter((r, i, arr) => arr.findIndex((x) => x.text === r.text) === i);
   const lines: string[] = [];
   if (c.some(interdental)) lines.push('Clean between your back teeth once a day, floss or an interdental brush, and take your time on the spots flagged in the app.');
-  if (c.some((r) => r.site.biomarker === 'lactate' || r.site.biomarker === 'pH')) lines.push('Keep sugary snacks and drinks to mealtimes rather than grazing. How often you eat sugar matters more than how much.');
-  if (c.some((r) => r.site.biomarker === 'calcium' || r.site.biomarker === 'phosphate')) lines.push('After brushing with fluoride toothpaste, spit, don’t rinse. It leaves fluoride on the enamel to help it remineralise.');
+  if (c.some((r) => r.site.biomarker === 'pH')) lines.push('Keep sugary snacks and drinks to mealtimes rather than grazing. How often you eat sugar matters more than how much.');
+  if (c.some((r) => r.site.biomarker === 'calcium')) lines.push('After brushing with fluoride toothpaste, spit, don’t rinse. It leaves fluoride on the enamel to help it remineralise.');
   const covered = (t: string) => (/floss|between/i.test(t) && lines.some((l) => /between/i.test(l))) || (/sugar/i.test(t) && lines.some((l) => /sugar/i.test(l))) || (/rinse/i.test(t) && lines.some((l) => /rinse/i.test(l)));
   for (const r of recs) if (lines.length < 4 && !covered(r.text)) lines.push(r.text);
   if (!lines.length) lines.push('Keep brushing twice a day with fluoride toothpaste and cleaning between your teeth. Your readings say it’s working.');
@@ -276,7 +276,7 @@ function plan(ctx: AssistantContext): Reply {
 
 function general(q: string, ctx: AssistantContext): Reply | null {
   const ph = concerns(ctx, 'pH', 1);
-  const lac = concerns(ctx, 'lactate', 1);
+  const lac = concerns(ctx, 'pH', 1);
   const interdentalBad = concerns(ctx).filter(interdental);
 
   if (has(q, /\bfloss|interdental|between (my )?teeth|water ?pick|waterflos/))
@@ -304,13 +304,13 @@ function general(q: string, ctx: AssistantContext): Reply | null {
     };
   if (has(q, /sugar|snack|candy|sweets|chocolate|diet|food|eat|gum\b|chewing gum|xylitol/))
     return {
-      text: `What matters most is how often, not how much. Every sugary snack gives plaque bacteria about 20–30 minutes of acid-making, so grazing all afternoon keeps your teeth in that zone.\n• Keep sweets to mealtimes.\n• Good snacks: cheese, nuts, plain yoghurt, crunchy vegetables.\n• Sugar-free gum, especially with xylitol, after eating boosts saliva, which neutralises acid.${lac.length ? `\n\nYour lactate is raised at ${lac.slice(0, 2).map((r) => toothNumber(toothByUniversal(r.site.toothUniversal), ctx.numbering)).join(' and ')}. That’s exactly the signal of bacteria fermenting sugar, so this is a lever that should show up in your next scans.` : ''}`,
-      topic: { bio: 'lactate' },
+      text: `What matters most is how often, not how much. Every sugary snack gives plaque bacteria about 20–30 minutes of acid-making, so grazing all afternoon keeps your teeth in that zone.\n• Keep sweets to mealtimes.\n• Good snacks: cheese, nuts, plain yoghurt, crunchy vegetables.\n• Sugar-free gum, especially with xylitol, after eating boosts saliva, which neutralises acid.${lac.length ? `\n\nYour pH is low at ${lac.slice(0, 2).map((r) => toothNumber(toothByUniversal(r.site.toothUniversal), ctx.numbering)).join(' and ')}. Low pH can have several causes. Limiting repeated sugar exposure is one practical step to discuss alongside your readings.` : ''}`,
+      topic: { bio: 'pH' },
     };
   if (has(q, /dry mouth|saliva|thirst|hydrat|water intake|mouth breath/))
     return {
       text: 'Saliva is your mouth’s natural defence: it washes away sugars, buffers acid and carries the calcium and phosphate that repair enamel. If your mouth often feels dry, drink water through the day, try sugar-free gum, and mention it to your dentist or doctor, since many medications cause it. Breathing through your mouth at night, common with retainers, also dries things out.',
-      suggestions: ['What about my ammonium readings?'],
+      suggestions: ['What about my ammonia readings?'],
     };
   if (has(q, /bad breath|halitosis|breath smell/))
     return {
@@ -340,7 +340,7 @@ function general(q: string, ctx: AssistantContext): Reply | null {
     };
   if (has(q, /what (does|do) (the )?(colou?rs?|green|amber|red|yellow)|legend|what.*mean/))
     return {
-      text: 'Green means in range, amber is borderline and worth watching, and red needs attention, meaning a reading crossed a research threshold. A gray ring means the sensor couldn’t get a reliable reading, so we show nothing rather than guess. Plain white dots on the 3D model are simply in range.',
+      text: 'Sensor colours show chemistry: pink is ammonia, green is pH, blue is calcium, yellow is fluoride and purple is aMMP-8. Hollow rings are K⁺ or aMMP-8 background references. Status words beside each reading show whether it is in range; a colour alone does not mean a tooth is healthy or unhealthy.',
     };
   if (has(q, /how (do|to) (i )?scan|start a scan|scanning|the case/))
     return {
@@ -445,14 +445,17 @@ export function topicFromHistory(history: { role: 'user' | 'assistant'; text: st
 /** Compact, de-identified summary sent to the optional server. */
 export function contextSummary(ctx: AssistantContext) {
   return {
+    data_source: 'simulated readings; aMMP-8 calibration not supplied',
+    reference_spots: ctx.arches.flatMap(a => a.analysis?.strip.sensorReferences ?? []),
+    mapped_sites: ctx.arches.flatMap(a => (a.analysis?.results ?? []).map(r => ({ id: r.site.id, teeth: siteTeeth(r.site), biomarker: r.site.biomarker, location: siteTitle(r.site, ctx.numbering).surface, value: r.reading.value }))),
     overall_in_range: ctx.overview.overall,
     direction: ctx.overview.direction,
     by_arch: ctx.overview.byArch,
     biomarkers: ctx.overview.biomarkers.map((b) => ({ id: b.id, in_range: b.inRange, direction: b.direction, concerns: b.concerns })),
     sites_needing_attention: concerns(ctx, undefined, 1).slice(0, 12).map((r) => ({
-      tooth: r.site.toothUniversal,
+      teeth: siteTeeth(r.site),
       tooth_name: toothByUniversal(r.site.toothUniversal).name,
-      surface: r.site.surface,
+      surface: siteTitle(r.site, ctx.numbering).surface,
       biomarker: r.site.biomarker,
       value: r.reading.value,
       unit: BIOMARKERS[r.site.biomarker].unit,

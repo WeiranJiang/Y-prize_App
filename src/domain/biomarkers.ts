@@ -1,13 +1,14 @@
 /**
  * Biomarker registry. A strip lists which of these it measures; the demo
- * strips measure all six (simulated). Thresholds are *configurable research thresholds*, not
+ * strips measure the five configured biomarkers (simulated). Thresholds are *configurable research thresholds*, not
  * diagnostic cut-offs.
  */
-export type BiomarkerId = 'pH' | 'lactate' | 'calcium' | 'phosphate' | 'fluoride' | 'ammonium';
+export type BiomarkerId = 'pH' | 'calcium' | 'fluoride' | 'ammonium' | 'aMMP8';
 export type Support = 'active' | 'research' | 'planned';
 export type Status = 'normal' | 'mild' | 'elevated' | 'high' | 'unavailable';
 
 export interface Bands {
+  configured?: boolean;
   /** 'low' — lower values are of concern (pH). 'high' — higher values are of concern. */
   concern: 'low' | 'high';
   mild: number;
@@ -58,21 +59,7 @@ export const BIOMARKERS: Record<BiomarkerId, Biomarker> = {
       high: 'High acidity',
     },
   },
-  lactate: {
-    id: 'lactate',
-    name: 'Lactate',
-    shortName: 'Lactate',
-    unit: 'mM',
-    decimals: 1,
-    support: 'research',
-    what: 'A by-product of bacterial sugar metabolism; a local signal of acid production.',
-    limitation: 'Lactate is a research indicator of local bacterial acid production. It reflects conditions at readout and does not diagnose decay.',
-    bands: { concern: 'high', mild: 2, elevated: 5, high: 10 },
-    range: [0, 15],
-    unc: [0.15, 8],
-    concernWord: 'higher',
-    statusWords: { normal: 'Within range', mild: 'Slightly raised', elevated: 'Raised', high: 'High' },
-  },
+
   calcium: {
     id: 'calcium',
     name: 'Calcium ions',
@@ -88,21 +75,7 @@ export const BIOMARKERS: Record<BiomarkerId, Biomarker> = {
     concernWord: 'lower',
     statusWords: { normal: 'Within range', mild: 'Slightly low', elevated: 'Low', high: 'Very low' },
   },
-  phosphate: {
-    id: 'phosphate',
-    name: 'Phosphate',
-    shortName: 'Phosphate',
-    unit: 'mM',
-    decimals: 1,
-    support: 'research',
-    what: 'Phosphate ions that, together with calcium, support enamel remineralisation.',
-    limitation: 'Phosphate readings are a research indicator of local mineral availability, not a diagnosis.',
-    bands: { concern: 'low', mild: 3, elevated: 2, high: 1 },
-    range: [0, 8],
-    unc: [0.1, 4],
-    concernWord: 'lower',
-    statusWords: { normal: 'Within range', mild: 'Slightly low', elevated: 'Low', high: 'Very low' },
-  },
+
   fluoride: {
     id: 'fluoride',
     name: 'Fluoride',
@@ -120,8 +93,8 @@ export const BIOMARKERS: Record<BiomarkerId, Biomarker> = {
   },
   ammonium: {
     id: 'ammonium',
-    name: 'Ammonium',
-    shortName: 'Ammonium',
+    name: 'Ammonia (NH₄⁺ sensor)',
+    shortName: 'Ammonia',
     unit: 'mM',
     decimals: 1,
     support: 'research',
@@ -133,9 +106,18 @@ export const BIOMARKERS: Record<BiomarkerId, Biomarker> = {
     concernWord: 'lower',
     statusWords: { normal: 'Within range', mild: 'Slightly low', elevated: 'Low', high: 'Very low' },
   },
+  aMMP8: {
+    id: 'aMMP8', name: 'Active MMP-8', shortName: 'aMMP-8', unit: '', decimals: 1, support: 'research',
+    what: 'A sensor at the lingual or palatal gum margin samples gingival crevicular fluid for active MMP-8.',
+    limitation: 'Locations are configured; calibrated values and validated thresholds have not been supplied. No readings or disease classifications are inferred.',
+    bands: { configured: false, concern: 'high', mild: 0, elevated: 0, high: 0 },
+    range: [0, 1], unc: [0, 0], concernWord: 'higher',
+    statusWords: { normal: 'Not calibrated', mild: 'Not calibrated', elevated: 'Not calibrated', high: 'Not calibrated' },
+  },
 };
 
-export const BIOMARKER_ORDER: BiomarkerId[] = ['pH', 'lactate', 'calcium', 'phosphate', 'fluoride', 'ammonium'];
+export const BIOMARKER_ORDER: BiomarkerId[] = ['ammonium', 'pH', 'calcium', 'fluoride', 'aMMP8'];
+export const BIOMARKER_COLORS: Record<BiomarkerId, string> = { ammonium: '#F46CB5', pH: '#31C85B', calcium: '#4AA3FF', fluoride: '#FFD84A', aMMP8: '#AD55F5' };
 
 export const STATUS_RANK: Record<Status, number> = { unavailable: -1, normal: 0, mild: 1, elevated: 2, high: 3 };
 
@@ -148,7 +130,7 @@ export const STATUS_LABEL: Record<Status, string> = {
 };
 
 export function classify(value: number | null, bands: Bands): Status {
-  if (value == null || Number.isNaN(value)) return 'unavailable';
+  if (bands.configured === false || value == null || Number.isNaN(value)) return 'unavailable';
   if (bands.concern === 'low') {
     if (value < bands.high) return 'high';
     if (value < bands.elevated) return 'elevated';
@@ -175,7 +157,7 @@ export function formatDelta(b: Biomarker, d: number | null | undefined): string 
 
 /** " mM" etc.; pH carries no unit suffix. */
 export function unitSuffix(b: Biomarker): string {
-  return b.unit === 'pH' ? '' : ` ${b.unit}`;
+  return !b.unit || b.unit === 'pH' ? '' : ` ${b.unit}`;
 }
 
 /** Value with name, e.g. "pH 5.4" or "Lactate 7.2 mM". */
