@@ -38,7 +38,7 @@ function niceTicks(lo: number, hi: number, n = 4) {
 
 export default function BiomarkerDetail() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const bio: BiomarkerId = id && id in BIOMARKERS ? (id as BiomarkerId) : 'pH';
+  const bio: BiomarkerId = typeof id === 'string' && Object.prototype.hasOwnProperty.call(BIOMARKERS, id) ? (id as BiomarkerId) : 'pH';
   const b = BIOMARKERS[bio];
   const { state } = useStore();
   const [range, setRange] = useState<Range>('30');

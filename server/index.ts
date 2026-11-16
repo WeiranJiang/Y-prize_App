@@ -11,10 +11,19 @@
  */
 import Anthropic from '@anthropic-ai/sdk';
 import { createServer } from 'node:http';
+import { timingSafeEqual } from 'node:crypto';
 import { LIMITS, RateLimiter, validateInput, type Turn } from './security.js';
 
 const client = new Anthropic();
 const PORT = Number(process.env.PORT ?? 8787);
+const HOST = process.env.HOST ?? '127.0.0.1';
+const TOKEN = process.env.CHAT_TOKEN ?? '';
+function authorized(header: string = '') {
+  if (!TOKEN) return true;
+  const given = Buffer.from(header.startsWith('Bearer ') ? header.slice(7) : '');
+  const expected = Buffer.from(TOKEN);
+  return given.length === expected.length && timingSafeEqual(given, expected);
+}
 
 const SYSTEM = `You are SPOT's friendly, thoughtful assistant. SPOT is an oral-health research prototype; all current readings are simulated demo data. Retainer strips measure local pH, lactate, calcium, phosphate, fluoride and ammonium.
 Answer the actual question directly, in natural language. Address every part of a multi-part question. Usually use a short paragraph; use bullets or more detail when helpful. Explain why a finding matters and offer a practical next step. Avoid canned introductions, repetitive disclaimers, and false reassurance. Ask one focused follow-up only when needed.
@@ -48,7 +57,7 @@ async function reply(question: string, history: Turn[], context: unknown): Promi
     .trim();
 }
 
-const origins = new Set((process.env.CHAT_ALLOWED_ORIGINS ?? '').split(',').map(s => s.trim()).filter(Boolean));
+const origins = new Set((process.env.CHAT_ALLOWED_ORIGINS ?? process.env.ALLOWED_ORIGINS ?? '').split(',').map(s => s.trim()).filter(Boolean));
 const perMinute = new RateLimiter(10, 60000);
 const perDay = new RateLimiter(100, 86400000);
 const globalDaily = new RateLimiter(1000, 86400000);
@@ -63,12 +72,13 @@ const server = createServer(async (req, res) => {
   if (origin) {
     res.setHeader('access-control-allow-origin', origin);
     res.setHeader('vary', 'Origin');
-    res.setHeader('access-control-allow-headers', 'content-type');
+    res.setHeader('access-control-allow-headers', 'content-type, authorization');
     res.setHeader('access-control-allow-methods', 'POST, OPTIONS');
   }
   if (req.url !== '/chat') return fail(404, 'not_found');
   if (req.method === 'OPTIONS') { res.statusCode = 204; res.end(); return; }
   if (req.method !== 'POST') { res.setHeader('allow', 'POST, OPTIONS'); return fail(405, 'method_not_allowed'); }
+  if (!authorized(req.headers.authorization)) return fail(401, 'unauthorized');
   const ip = req.socket.remoteAddress ?? 'unknown';
   const retry = perMinute.take(ip) || perDay.take(ip) || globalDaily.take('all');
   if (retry) { res.setHeader('retry-after', retry); return fail(429, 'rate_limited'); }
@@ -97,4 +107,4 @@ const server = createServer(async (req, res) => {
 server.requestTimeout = 15000;
 server.headersTimeout = 10000;
 server.timeout = 35000;
-server.listen(PORT, () => console.log(`SPOT chat server on :${PORT}`));
+server.listen(PORT, HOST, () => console.log(`SPOT chat server on :${PORT}`));

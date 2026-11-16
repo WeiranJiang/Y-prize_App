@@ -129,7 +129,7 @@ export default function Loupe({ tooth, regions, onClose }: { tooth: number | nul
 
             <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.md }}>
               <Button compact label="Tooth details" style={{ flex: 1 }} onPress={() => { onClose(); router.push({ pathname: '/tooth', params: { u: String(tooth) } }); }} />
-              <Button compact kind="secondary" label="Trends" style={{ flex: 1 }} onPress={() => { onClose(); router.navigate({ pathname: '/trends', params: { tooth: String(tooth) } }); }} />
+              <Button compact kind="secondary" label="History" style={{ flex: 1 }} onPress={() => { onClose(); router.navigate({ pathname: '/trends', params: { tooth: String(tooth) } }); }} />
             </View>
           </View>
         </Animated.View>

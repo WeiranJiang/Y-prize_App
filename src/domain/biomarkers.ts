@@ -168,7 +168,9 @@ export function formatValue(b: Biomarker, v: number | null | undefined): string 
 
 export function formatDelta(b: Biomarker, d: number | null | undefined): string {
   if (d == null) return '—';
-  return `${d > 0 ? '+' : ''}${d.toFixed(b.decimals)}`;
+  const t = d.toFixed(b.decimals);
+  if (Number(t) === 0) return (0).toFixed(b.decimals);
+  return `${d > 0 ? '+' : ''}${t}`;
 }
 
 /** " mM" etc.; pH carries no unit suffix. */
