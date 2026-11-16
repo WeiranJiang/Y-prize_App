@@ -2,7 +2,6 @@ import { router } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Disclosure from '../components/Disclosure';
-import StripHealthCard from '../components/StripHealthCard';
 import { Card, Divider, IconButton, Row, Screen, Section, Segmented, T } from '../components/ui';
 import { useStore } from '../state/store';
 import { colors, space } from '../theme/tokens';
@@ -19,7 +18,7 @@ function Step({ label, value, onMinus, onPlus }: { label: string; value: string;
 }
 
 export default function Profile() {
-  const { state, dispatch, stripFor, setArch } = useStore();
+  const { state, dispatch, setArch } = useStore();
   const s = state.settings;
   const L = s.limits;
   const B = s.pHBands;
@@ -34,27 +33,23 @@ export default function Profile() {
       <View style={{ paddingHorizontal: space.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <View>
           <T v="display">Profile</T>
-          <T v="small" style={{ marginTop: 2 }}>Alex · Upper and lower retainers</T>
         </View>
 
       </View>
 
       <Section title="Devices">
         <Card style={{ paddingVertical: 4 }}>
-          <Row label="Scanning case" sub={`${state.caseStatus[0].toUpperCase()}${state.caseStatus.slice(1)} · firmware 0.9.4 (demo)`} value={`${Math.round(state.caseBattery * 100)}%`} />
+          <Row label="Scanning case" sub={`${state.caseStatus[0].toUpperCase()}${state.caseStatus.slice(1)}`} value={`${Math.round(state.caseBattery * 100)}%`} />
           {(['upper', 'lower'] as const).map((a) => {
-            const st = stripFor(a);
             return (
               <React.Fragment key={a}>
                 <Divider />
-                <Row label={`${a === 'upper' ? 'Upper' : 'Lower'} sensing strip`} sub={`${st.id} · batch ${st.batch} · ${st.calibrationVersion} · 6 biomarkers`} value="No battery" onPress={() => { setArch(a); router.push('/strip'); }} />
+                <Row label={`${a === 'upper' ? 'Upper' : 'Lower'} sensing strip`} onPress={() => { setArch(a); router.push('/strip'); }} />
               </React.Fragment>
             );
           })}
         </Card>
-        <View style={{ marginTop: space.md }}>
-          <StripHealthCard compact />
-        </View>
+
       </Section>
 
       <Section title="Display">
@@ -87,13 +82,11 @@ export default function Profile() {
 
       <Section title="About">
         <Card style={{ paddingVertical: 4 }}>
-          <Row label="How findings are made" sub="Rules, limitations and what the map shows" onPress={() => router.push('/about')} />
+          <Row label="How findings are made" onPress={() => router.push('/about')} />
           <Divider />
-          <Row label="Reset demo data" sub="Restore the original 4-week demo history" onPress={() => dispatch({ type: 'reset' })} />
+          <Row label="Reset demo data" onPress={() => dispatch({ type: 'reset' })} />
         </Card>
-        <T v="small" style={{ marginTop: space.lg, color: colors.textMuted }}>
-          SPOT (Submillimeter Polymer Optical Transmitter) research prototype · University of Pennsylvania. Not a medical device. All data shown is simulated.
-        </T>
+
       </Section>
     </Screen>
   );

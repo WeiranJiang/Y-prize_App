@@ -4,8 +4,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import Disclosure from '../../components/Disclosure';
 import BottomSheet from '../../components/BottomSheet';
 import { replaceEta } from '../../components/StripHealthCard';
-import { Button, Card, Divider, Meter, Screen, Section, Segmented, StatusDot, T } from '../../components/ui';
-import { pct, STATE_COLOR_KEY } from '../../domain/fouling';
+import { Button, Card, Divider, Screen, Section, Segmented, StatusDot, T } from '../../components/ui';
+import { STATE_COLOR_KEY } from '../../domain/fouling';
 import type { Arch } from '../../domain/teeth';
 import { useStore } from '../../state/store';
 import { colors, space } from '../../theme/tokens';
@@ -27,7 +27,7 @@ export default function Strips() {
   const { state, dispatch, healthFor, setArch } = useStore();
   const { plan, supply, orders } = state;
   const [qty, setQty] = useState<Record<Arch, number>>({ upper: 2, lower: 2 });
-  const [confirm, setConfirm] = useState(false);
+  const [sheet, setSheet] = useState<'delivery' | 'confirm' | null>(null);
   const setPlan = (patch: Partial<typeof plan>) => dispatch({ type: 'plan', patch });
   const pending = orders.find((o) => o.status !== 'delivered');
 
@@ -65,13 +65,9 @@ export default function Strips() {
                     <T v="bodyStrong">{a === 'upper' ? 'Upper' : 'Lower'} strip</T>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <StatusDot status={key} />
-                      <T v="small" style={{ color: colors.text }}>{h.state === 'now' ? 'Replace now' : `Replace in ${replaceEta(h).toLowerCase()}`}</T>
+                      <T v="body" style={{ color: colors.text, fontSize: 14 }}>{h.state === 'now' ? 'Replace now' : h.state === 'baseline' ? 'Awaiting readout' : `Replace in ${replaceEta(h).toLowerCase()}`}</T><T v="body">›</T>
                     </View>
                   </View>
-                  <View style={{ marginTop: space.md }}>
-                    <Meter value={h.clarity ?? 1} status={key} marks={[h.limits.clarityReplace]} />
-                  </View>
-                  <T v="small" style={{ marginTop: 6, fontSize: 11 }}>Clarity {h.clarity != null ? pct(h.clarity) : '—'} · day {Math.floor(h.daysInUse) + 1} of {h.limits.maxDays}</T>
                 </Card>
               );
             })}
@@ -95,41 +91,11 @@ export default function Strips() {
           ) : null}
         </Section>
 
-        {/* Delivery */}
-        <Section title="Delivery">
-          <Segmented
-            style={{ paddingHorizontal: 0 }}
-            options={[{ key: 'auto', label: 'Automatic' }, { key: 'manual', label: 'Manual' }]}
-            value={plan.mode}
-            onChange={(k) => setPlan({ mode: k })}
-          />
-          {plan.mode === 'auto' ? (
-            <Card style={{ marginTop: space.md }}>
-              <T v="small">{plan.paused ? 'Paused' : pending ? 'On its way' : 'Next box ships'}</T>
-              <T v="title" style={{ marginTop: 4 }}>
-                {plan.paused ? 'No deliveries' : pending ? `Arrives ${fmtDate(pending.eta)}` : `Around ${fmtDate(nextShip)}`}
-              </T>
-              <Disclosure title="Delivery settings">
-              <Row label="Upper per box"><Stepper value={plan.perBox.upper} onChange={(v) => setPlan({ perBox: { ...plan.perBox, upper: v } })} /></Row>
-              <Row label="Lower per box"><Stepper value={plan.perBox.lower} onChange={(v) => setPlan({ perBox: { ...plan.perBox, lower: v } })} /></Row>
-              <Row label="Ship when spares reach"><Stepper value={plan.reorderAt} min={0} max={3} onChange={(v) => setPlan({ reorderAt: v })} /></Row>
-              </Disclosure>
-              <View style={{ marginTop: space.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <T v="small">${(plan.perBox.upper + plan.perBox.lower) * PRICE} per box · demo, no charge</T>
-                <Pressable onPress={() => setPlan({ paused: !plan.paused })} style={styles.pill}>
-                  <T v="small" style={{ color: colors.text }}>{plan.paused ? 'Resume' : 'Pause'}</T>
-                </Pressable>
-              </View>
-            </Card>
-          ) : (
-            <Card style={{ marginTop: space.md }}>
-              <Row label="Upper strips"><Stepper value={qty.upper} onChange={(v) => setQty({ ...qty, upper: v })} /></Row>
-              <Row label="Lower strips"><Stepper value={qty.lower} onChange={(v) => setQty({ ...qty, lower: v })} /></Row>
-              <Divider style={{ marginVertical: space.md }} />
-              <T v="small">${(qty.upper + qty.lower) * PRICE} · arrives in about 3 days · demo, no charge</T>
-              <Button label="Create demo order" style={{ marginTop: space.lg }} disabled={qty.upper + qty.lower === 0} onPress={() => setConfirm(true)} />
-            </Card>
-          )}
+        <Section title="Delivery" action={<Button label="Manage" compact kind="secondary" onPress={() => setSheet('delivery')} />}>
+          <Card>
+            <T v="bodyStrong">{plan.mode === 'auto' ? plan.paused ? 'Automatic delivery paused' : 'Automatic delivery' : 'Order when needed'}</T>
+            {pending ? <T v="body" style={{ marginTop: space.sm }}>Arrives {fmtDate(pending.eta)}</T> : plan.mode === 'auto' && !plan.paused ? <T v="body" style={{ marginTop: space.sm }}>Next box around {fmtDate(nextShip)}</T> : null}
+          </Card>
         </Section>
 
         {/* Orders */}
@@ -156,18 +122,32 @@ export default function Strips() {
         </Section>
       </Screen>
 
-      <BottomSheet open={confirm} onClose={() => setConfirm(false)}>
-        <T v="title">Confirm demo order</T>
-        <T v="body" style={{ marginTop: space.md }}>{qty.upper} upper and {qty.lower} lower strips · ${(qty.upper + qty.lower) * PRICE}</T>
-        <Button
-          label="Place demo order"
-          style={{ marginTop: space.xl }}
-          onPress={() => {
-            dispatch({ type: 'order', qty, kind: 'manual', at: new Date() });
-            setConfirm(false);
-          }}
-        />
-        <Button label="Cancel" kind="ghost" style={{ marginTop: space.sm }} onPress={() => setConfirm(false)} />
+      <BottomSheet open={sheet !== null} onClose={() => setSheet(null)} maxHeight={0.85}>
+        {sheet === 'confirm' ? <>
+          <T v="title">Confirm demo order</T>
+          <T v="body" style={{ marginTop: space.md }}>{qty.upper} upper + {qty.lower} lower strips · ${(qty.upper + qty.lower) * PRICE}</T>
+          <T v="body" style={{ marginTop: space.sm }}>No payment or real shipment.</T>
+          <Button label="Place demo order" style={{ marginTop: space.xl }} onPress={() => { dispatch({ type: 'order', qty, kind: 'manual', at: new Date() }); setSheet(null); }} />
+          <Button label="Back" kind="ghost" style={{ marginTop: space.sm }} onPress={() => setSheet('delivery')} />
+        </> : <>
+          <T v="title">Delivery settings</T>
+          <View style={{ marginTop: space.lg }}><Segmented fill style={{ paddingHorizontal: 0 }} options={[{ key: 'auto', label: 'Automatic' }, { key: 'manual', label: 'Manual' }]} value={plan.mode} onChange={mode => setPlan({ mode })} /></View>
+          <View style={{ marginTop: space.lg }}>
+            {plan.mode === 'auto' ? <>
+              <Row label="Upper per box"><Stepper label="upper strips per box" value={plan.perBox.upper} onChange={value => setPlan({ perBox: { ...plan.perBox, upper: value } })} /></Row>
+              <Row label="Lower per box"><Stepper label="lower strips per box" value={plan.perBox.lower} onChange={value => setPlan({ perBox: { ...plan.perBox, lower: value } })} /></Row>
+              <Row label="Reorder at this many spares"><Stepper label="reorder point" value={plan.reorderAt} min={0} max={3} onChange={reorderAt => setPlan({ reorderAt })} /></Row>
+              <T v="body" style={{ marginTop: space.md }}>${(plan.perBox.upper + plan.perBox.lower) * PRICE} per box · demo, no charge</T>
+              <Button label={plan.paused ? 'Resume deliveries' : 'Pause deliveries'} kind="secondary" style={{ marginTop: space.lg }} onPress={() => setPlan({ paused: !plan.paused })} />
+            </> : <>
+              <Row label="Upper strips"><Stepper label="upper strips to order" value={qty.upper} onChange={upper => setQty({ ...qty, upper })} /></Row>
+              <Row label="Lower strips"><Stepper label="lower strips to order" value={qty.lower} onChange={lower => setQty({ ...qty, lower })} /></Row>
+              <T v="body" style={{ marginTop: space.md }}>${(qty.upper + qty.lower) * PRICE} · demo, no charge</T>
+              <Button label="Review order" style={{ marginTop: space.lg }} disabled={qty.upper + qty.lower === 0} onPress={() => setSheet('confirm')} />
+            </>}
+          </View>
+          <Button label="Done" kind="ghost" style={{ marginTop: space.md }} onPress={() => setSheet(null)} />
+        </>}
       </BottomSheet>
     </View>
   );
@@ -184,7 +164,6 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 const styles = StyleSheet.create({
   step: { width: 44, height: 44, borderRadius: 15, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairlineStrong, alignItems: 'center', justifyContent: 'center' },
-  pill: { paddingHorizontal: 14, minHeight: 44, borderRadius: 999, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairlineStrong, alignItems: 'center', justifyContent: 'center' },
   order: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
   border: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.hairline },
 });
