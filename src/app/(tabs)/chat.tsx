@@ -158,14 +158,14 @@ export default function Chat() {
                 accessibilityLabel={mode === 'dentist' ? 'Message Melissa' : 'Ask the chatbot'} style={styles.input}
                 editable={!busy && !waiting} textAlignVertical="top"
               />
-              <Pressable accessibilityRole="button" accessibilityLabel={mode === 'dentist' ? 'Save message draft' : 'Send to chatbot'} accessibilityState={{ disabled }} disabled={disabled} onPress={send} style={[styles.send, disabled && { opacity: 0.35 }]}>{mode === 'dentist' ? <T v="small" style={{ color: colors.textOnLight }}>Save</T> : <Icon name="send" size={18} color={colors.textOnLight} />}</Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel={mode === 'dentist' ? 'Send message to Melissa' : 'Send to chatbot'} accessibilityState={{ disabled }} disabled={disabled} onPress={send} style={[styles.send, disabled && { opacity: 0.35 }]}>{mode === 'dentist' ? <T v="small" style={{ color: colors.textOnLight }}>Send</T> : <Icon name="send" size={18} color={colors.textOnLight} />}</Pressable>
             </View>
           </View>
         </View>
       </KeyboardAvoidingView>
       <BottomSheet open={info} onClose={() => setInfo(false)}>
         <T v="title">About messages</T>
-        <T v="body" style={{ marginTop: space.md }}>Melissa Pike is the dentist contact shown in this preview. Dentist messaging is not connected yet. Saving a draft does not deliver it to Melissa.</T>
+        <T v="body" style={{ marginTop: space.md }}>Melissa Pike is the dentist contact shown in this preview. Dentist messaging is not connected yet. Messages marked “Not sent” have not been delivered to Melissa.</T>
         <T v="body" style={{ marginTop: space.md }}>The separate OraCare chatbot offers faster automated answers about readings and retainer care. It never replies as Melissa. Drafts and chatbot conversations reset on reload.</T>
         <T v="body" style={{ marginTop: space.md }}>For urgent symptoms, contact a dentist or emergency service directly.</T>
         <Button label="Got it" style={{ marginTop: space.lg }} onPress={() => setInfo(false)} />
