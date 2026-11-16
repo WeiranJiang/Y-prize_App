@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import Svg, { Circle, G, Path, Text as SvgText } from 'react-native-svg';
 import { archFrames, crownFor } from '../domain/arch';
 import { Arch, NumberingSystem } from '../domain/teeth';
+import { toothShape } from '../domain/toothShape';
 import { colors, font } from '../theme/tokens';
 
 /** Occlusal (top-down) arch map. Tap a tooth to select it. */
@@ -29,7 +30,7 @@ export default function ArchDiagram({
   // outside every crown for tooth numbers, strokes and the card border.
   const bounds = frames.map(f => {
     const c = crownFor(arch, f.tooth.position);
-    const radius = Math.max(c.w * 0.46, c.b * 0.425);
+    const radius = Math.hypot(c.w * 0.46, c.b * 0.425);
     return { x: f.center[0], z: f.center[2], radius };
   });
   const minX = Math.min(...bounds.map(b => b.x - b.radius));
@@ -61,11 +62,14 @@ export default function ArchDiagram({
             const label = numbering === 'universal' ? String(u) : String(f.tooth.fdi);
             const lx = X + f.normal[0] * (ry + 11);
             const ly = Y - f.normal[2] * (ry + 11) * (flip ? -1 : 1);
-            const ellipse = `M${-rx},0 a${rx},${ry} 0 1,0 ${rx * 2},0 a${rx},${ry} 0 1,0 ${-rx * 2},0`;
+            const shape = toothShape(f.tooth.position);
             return (
               <G key={u} onPress={() => onSelect(u)}>
                 <G transform={`translate(${X},${Y}) rotate(${-ang})`}>
-                  <Path d={ellipse} fill={m && !m.dashed ? m.color : 'transparent'} fillOpacity={on ? 0.36 : 0.18} stroke={stroke} strokeWidth={on ? 1.6 : 1} strokeDasharray={m?.dashed ? '2 2' : undefined} />
+                  <G transform={`scale(${rx},${ry})`}>
+                    <Path d={shape.outline} vectorEffect="non-scaling-stroke" fill={m && !m.dashed ? m.color : colors.text} fillOpacity={m && !m.dashed ? (on ? 0.36 : 0.18) : 0.06} stroke={stroke} strokeWidth={on ? 1.6 : 1} strokeDasharray={m?.dashed ? '2 2' : undefined} />
+                    <Path d={shape.grooves} fill="none" stroke={stroke} strokeOpacity={on ? 0.7 : 0.45} strokeWidth={0.7} vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                  </G>
                 </G>
                 {m && !m.dashed ? <Circle cx={X} cy={Y} r={2.4} fill={m.color} /> : null}
                 <SvgText x={lx} y={ly + 3} fontSize={9} textAnchor="middle" fill={on ? colors.text : colors.textMuted} fontFamily={font.family} fontWeight="500">

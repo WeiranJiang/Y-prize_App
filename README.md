@@ -2,6 +2,10 @@
 
 Mobile app for the SPOT (Submillimeter Polymer Optical Transmitter) system: a sensing strip in a clear retainer, an optical scanning case, and this app. Built with Expo (SDK 58) + Expo Router + expo-gl/three.js. **All data is simulated demo data.**
 
+## Web demo
+
+[Open the Enamelytics demo](https://enamelytics.vercel.app/)
+
 ## Run
 
 ```bash
@@ -77,3 +81,9 @@ The backend allows 10 requests/minute and 100/day per socket IP, 1,000/day globa
 Set `CHAT_ALLOWED_ORIGINS` to a comma-separated list of exact web origins (e.g. `https://spot.example.com`). Browser origins are denied by default; native clients do not send Origin. CORS is not authentication: this prototype has no user accounts. Before exposing private user records or running a public paid service, add verified user authentication and shared per-user quotas at your gateway. Do not put shared backend secrets in `EXPO_PUBLIC_*` variables. Use HTTPS for deployment; HTTP is allowed in development only. Health questions and summaries are sent to the model provider when live chat is configured; avoid entering identifying details. Request bodies and upstream errors are not logged by this server. Keep proxy access logs free of bodies and enforce request-size/time limits there too.
 
 Server checks: `cd server && npm run typecheck && npx tsx --test security.test.ts`.
+
+## Share a web demo on Vercel
+
+Import [this repository into Vercel](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FWeiranJiang%2FY-prize_App). Choose the repository root, then deploy. `vercel.json` sets the Expo web export command, `dist` output, SPA route fallback, and security headers. Vercel supplies a shareable HTTPS URL after deployment. For a project already connected to this repository, the next deployment picks up these settings automatically.
+
+The hosted demo uses simulated readings and the offline Ask guide by default. The optional Node chat server is a separate service; this static deployment does not run `server/index.ts`. To enable live Ask, deploy that service separately, set `EXPO_PUBLIC_CHAT_URL` to its HTTPS `/chat` endpoint in Vercel before building, and allow your Vercel site's exact origin in the backend's `CHAT_ALLOWED_ORIGINS`.
