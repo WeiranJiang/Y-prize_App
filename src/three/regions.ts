@@ -1,5 +1,5 @@
 /** Configured sensor locations use chemistry colours; the strip-health overlay uses labelled signal colours. */
-import { attentionSites } from '../domain/attention';
+import { attentionSites, attentionLevel, ATTENTION_COLORS } from '../domain/attention';
 import { Vec3 } from '../domain/arch';
 import { BiomarkerId, Status } from '../domain/biomarkers';
 import { sensorAnchor, configuredSensorRegions } from '../domain/sensorGeometry';
@@ -38,9 +38,9 @@ export function regionsForScan(scan: Scan | undefined, strip: Strip | undefined,
   if (!strip) return [];
   if (mode === 'signal') return scan ? signalRegions(scan, strip) : [];
   if (mode !== 'overview' && !strip.supported.includes(mode)) return [];
-  const flagged = new Set(attentionSites(scan, strip, mode).map(site => site.id));
+  const flagged = new Map(attentionSites(scan, strip, mode).map(site => [site.id, attentionLevel(scan, site)]));
   return configuredSensorRegions(strip, mode).map(region => flagged.has(region.id)
-    ? { ...region, markerColor: region.color, color: colors.high, radius: Math.max(region.radius, 1.8) }
+    ? { ...region, markerColor: region.color, color: ATTENTION_COLORS[flagged.get(region.id)!], radius: Math.max(region.radius, 1.8) }
     : region);
 }
 

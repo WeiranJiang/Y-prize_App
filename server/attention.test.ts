@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { buildDemoHistory } from '../src/domain/demo';
-import { attentionSites } from '../src/domain/attention';
+import { attentionSites, attentionLevel } from '../src/domain/attention';
 
 test('review shading requires a reported measurement and follows the selected biomarker', () => {
   const demo = buildDemoHistory(new Date());
@@ -12,6 +12,10 @@ test('review shading requires a reported measurement and follows the selected bi
   reading.value = 4;
   assert.ok(attentionSites(scan, strip).some(s => s.id === site.id));
   assert.ok(!attentionSites(scan, strip, 'calcium').some(s => s.id === site.id));
+  assert.equal(attentionLevel(scan, site), 'attention');
+  reading.value = 5.7;
+  assert.ok(attentionSites(scan, strip).some(s => s.id === site.id));
+  assert.equal(attentionLevel(scan, site), 'watch');
   reading.value = null;
   assert.ok(!attentionSites(scan, strip).some(s => s.id === site.id));
   reading.value = 7;

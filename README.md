@@ -22,14 +22,14 @@ npm run typecheck
 | **Home** | Upper/Lower toggle, biomarker filter, the interactive point-cloud retainer, one status line, dental-arch map, tooth search, insights and recommendations. Tapping a tooth (3D, arch map or search) opens the **magnifier**: a circular zoomed 3D view of that tooth with its readings. |
 | **Trends** | Pick a biomarker and tap a tooth to see its current readings and history; all-sites small multiples, neighbouring-site comparison, persistent findings, measurement reliability, before/after 3D compare |
 | **Overview** | Whole-mouth summary: share of readings in range, direction of travel, upper vs lower, a tile per biomarker, last recorded scans and month/year scan activity calendars |
-| **Ask** | Dentist-messaging preview with draft prompts and automated demo replies; no connected practice |
+| **Ask** | Melissa Pike dentist message drafts plus a separate chatbot for faster answers; dentist delivery is not connected |
 | **Strips** | Strips in use, spares at home, automatic (subscription) or manual reordering, order history (demo, no payments) |
 
 Other routes: `/profile` (icon on Home), `/strip` (strip health), `/compare`, `/scan-details`, `/about`.
 
 ## Ask: optional Claude backend
 
-The Ask tab previews a conversation with a dental care team. No clinician receives messages and no appointments or prescriptions can be requested. Conversations reset on reload. Demo replies run on-device from the app's own rules and data. To use Claude instead, run the small server in `server/` and point the app at it. The API key stays on the server, never in the app:
+The Ask tab separates message drafts for Melissa Pike from automated OraCare chatbot answers. No clinician receives messages and no appointments or prescriptions can be requested. Conversations reset on reload. Demo replies run on-device from the app's own rules and data. To use Claude instead, run the small server in `server/` and point the app at it. The API key stays on the server, never in the app:
 
 ```bash
 cd server && npm install && ANTHROPIC_API_KEY=... npm start

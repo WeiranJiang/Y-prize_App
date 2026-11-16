@@ -3,12 +3,12 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, ScrollViewInstan
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from '../../components/Icon';
 import BottomSheet from '../../components/BottomSheet';
-import { Button, IconButton, T } from '../../components/ui';
+import { Button, IconButton, Segmented, T } from '../../components/ui';
 import { siteSeries } from '../../domain/analysis';
 import { ask, AssistantContext, Reply, SiteTrend } from '../../domain/assistant';
 import { buildInsights } from '../../domain/insights';
 import { buildOverview } from '../../domain/overview';
-import { CARE_DEMO_NOTICE, CARE_STARTERS, careDemoReply } from '../../domain/careMessaging';
+import { CARE_STARTERS, careDemoReply } from '../../domain/careMessaging';
 import { RateLimiter } from '../../domain/rateLimit';
 import type { Arch } from '../../domain/teeth';
 import { useStore } from '../../state/store';
@@ -22,13 +22,16 @@ interface Msg {
 
 const START: Msg = {
   id: 0, role: 'assistant',
-  text: 'What would you like to discuss with your dental team? You can ask about your readings, retainer care, or preparing for a visit.',
+  text: 'I can help explain your readings and retainer care while you wait to speak with your dentist.',
 };
 
 export default function Chat() {
   const store = useStore();
   const { state } = store;
   const insets = useSafeAreaInsets();
+  const [mode, setMode] = useState<'dentist' | 'bot'>('dentist');
+  const [drafts, setDrafts] = useState<Msg[]>([]);
+  const [dentistText, setDentistText] = useState('');
   const [msgs, setMsgs] = useState<Msg[]>([START]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -82,12 +85,17 @@ export default function Chat() {
   }, [state.scans, state.strips, state.settings, state.supply, state.plan, state.rev]);
 
   const send = async () => {
-    const question = text.trim().slice(0, 1000);
+    const question = (mode === 'dentist' ? dentistText : text).trim().slice(0, 1000);
     if (!question || sending.current || waiting) return;
     const gate = limiter.take();
     if (!gate.ok) {
       setWaitUntil(Date.now() + gate.retryInMs);
       setNow(Date.now());
+      return;
+    }
+    if (mode === 'dentist') {
+      setDrafts(messages => [...messages, { id: ids.current++, role: 'user', text: question }]);
+      setDentistText('');
       return;
     }
     sending.current = true;
@@ -106,7 +114,7 @@ export default function Chat() {
       setBusy(false);
     }
   };
-  const disabled = !text.trim() || busy || waiting;
+  const disabled = !(mode === 'dentist' ? dentistText : text).trim() || busy || waiting;
 
   return (
     <>
@@ -114,50 +122,52 @@ export default function Chat() {
         <View style={{ flex: 1, width: '100%', maxWidth: 760, alignSelf: 'center' }}>
           <View style={{ paddingTop: insets.top + space.md, paddingHorizontal: space.lg }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm }}>
-              <T v="display" style={{ flex: 1, fontSize: 28 }}>Ask your dentist</T>
+              <T v="display" style={{ flex: 1, fontSize: 28 }}>Messages</T>
               <IconButton name="info" label="About dentist messaging demo" onPress={() => setInfo(true)} />
             </View>
+            <Segmented fill style={{ marginTop: space.md }} options={[{ key: 'dentist', label: 'My dentist' }, { key: 'bot', label: 'Ask chatbot' }]} value={mode} onChange={setMode} />
             <View style={styles.recipient}>
               <View style={styles.avatar}><Icon name="profile" size={22} color={colors.text} /></View>
-              <View style={{ flex: 1 }}><T v="bodyStrong">Your dental care team</T><T v="small">Demo practice</T></View>
-              <View style={styles.demoTag}><T v="small" style={{ color: colors.text }}>Preview</T></View>
+              <View style={{ flex: 1 }}><T v="bodyStrong">{mode === 'dentist' ? 'Melissa Pike' : 'OraCare chatbot'}</T><T v="small">{mode === 'dentist' ? 'Your dentist' : 'Automated answers'}</T></View>
+
             </View>
-            <T v="small" style={styles.notice}>{CARE_DEMO_NOTICE}</T>
+            <T v="small" style={styles.notice}>{mode === 'dentist' ? 'Ask about your readings, retainer care or a concern. Messaging isn’t connected yet; drafts stay here until you reload.' : 'Get a faster answer from the chatbot. Automated guidance, not a reply from Melissa.'}</T>
           </View>
 
           <ScrollView ref={scroll} style={{ flex: 1 }} contentContainerStyle={{ padding: space.lg, paddingBottom: space.sm }} keyboardShouldPersistTaps="handled" onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}>
-            {msgs.map(message => message.role === 'system' ? <T key={message.id} v="small" accessibilityLiveRegion="polite" style={{ marginVertical: space.md }}>{message.text}</T> : (
+            {mode === 'dentist' && !drafts.length ? <T v="body">Write a message for Melissa, or ask the chatbot for a quick answer.</T> : null}
+            {(mode === 'dentist' ? drafts : msgs).map(message => message.role === 'system' ? <T key={message.id} v="small" accessibilityLiveRegion="polite" style={{ marginVertical: space.md }}>{message.text}</T> : (
               <View key={message.id} style={[styles.message, message.role === 'user' ? { alignSelf: 'flex-end' } : { alignSelf: 'flex-start' }]}>
-                <T v="small" style={{ marginBottom: 5 }}>{message.role === 'user' ? 'You · demo message' : 'Dental team · automated demo reply'}</T>
+                <T v="small" style={{ marginBottom: 5 }}>{message.role === 'user' ? (mode === 'dentist' ? 'You · draft, not sent' : 'You') : 'OraCare chatbot'}</T>
                 <View style={[styles.bubble, message.role === 'user' ? styles.patient : styles.team]}>
                   <T v="body" style={{ color: message.role === 'user' ? colors.textOnLight : colors.text }}>{message.text}</T>
                 </View>
               </View>
             ))}
-            {busy ? <T v="small" accessibilityLiveRegion="polite" style={{ paddingVertical: space.sm }}>Generating demo reply…</T> : null}
-            {msgs.length === 1 ? <View style={styles.starters}>
-              {CARE_STARTERS.map(starter => <Pressable key={starter.label} accessibilityRole="button" accessibilityLabel={`Draft message: ${starter.label}`} onPress={() => { setText(starter.text); input.current?.focus(); }} style={styles.chip}><T v="small" style={{ color: colors.text }}>{starter.label}</T></Pressable>)}
+            {busy ? <T v="small" accessibilityLiveRegion="polite" style={{ paddingVertical: space.sm }}>Preparing an answer…</T> : null}
+            {(mode === 'dentist' ? drafts.length === 0 : msgs.length === 1) ? <View style={styles.starters}>
+              {CARE_STARTERS.map(starter => <Pressable key={starter.label} accessibilityRole="button" accessibilityLabel={`Draft message: ${starter.label}`} onPress={() => { if (mode === 'dentist') setDentistText(starter.text); else setText(starter.text); input.current?.focus(); }} style={styles.chip}><T v="small" style={{ color: colors.text }}>{starter.label}</T></Pressable>)}
             </View> : null}
           </ScrollView>
 
           <View style={{ paddingHorizontal: space.lg, paddingTop: space.sm, marginBottom: 76 + insets.bottom }}>
-            {waiting ? <T v="small" accessibilityLiveRegion="polite" style={{ marginBottom: space.sm }}>Demo message limit. Try again in {Math.max(1, Math.ceil((waitUntil - now) / 1000))}s.</T> : null}
+            {waiting ? <T v="small" accessibilityLiveRegion="polite" style={{ marginBottom: space.sm }}>Message limit. Try again in {Math.max(1, Math.ceil((waitUntil - now) / 1000))}s.</T> : null}
             <View style={styles.composer}>
               <TextInput
-                ref={input} value={text} onChangeText={setText} maxLength={1000} multiline
-                placeholder="Message your dental team…" placeholderTextColor={colors.textMuted}
-                accessibilityLabel="Message your dental team" style={styles.input}
+                ref={input} value={mode === 'dentist' ? dentistText : text} onChangeText={mode === 'dentist' ? setDentistText : setText} maxLength={1000} multiline
+                placeholder={mode === 'dentist' ? 'Message Melissa…' : 'Ask the chatbot…'} placeholderTextColor={colors.textMuted}
+                accessibilityLabel={mode === 'dentist' ? 'Message Melissa' : 'Ask the chatbot'} style={styles.input}
                 editable={!busy && !waiting} textAlignVertical="top"
               />
-              <Pressable accessibilityRole="button" accessibilityLabel="Send demo message" accessibilityState={{ disabled }} disabled={disabled} onPress={send} style={[styles.send, disabled && { opacity: 0.35 }]}><Icon name="send" size={18} color={colors.textOnLight} /></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel={mode === 'dentist' ? 'Save message draft' : 'Send to chatbot'} accessibilityState={{ disabled }} disabled={disabled} onPress={send} style={[styles.send, disabled && { opacity: 0.35 }]}>{mode === 'dentist' ? <T v="small" style={{ color: colors.textOnLight }}>Save</T> : <Icon name="send" size={18} color={colors.textOnLight} />}</Pressable>
             </View>
           </View>
         </View>
       </KeyboardAvoidingView>
       <BottomSheet open={info} onClose={() => setInfo(false)}>
-        <T v="title">Dentist messaging preview</T>
-        <T v="body" style={{ marginTop: space.md }}>This screen demonstrates how messaging your healthcare provider could work. No practice is connected, and no clinician receives, reads or responds to these messages.</T>
-        <T v="body" style={{ marginTop: space.md }}>Replies are generated automatically using demo readings. This conversation resets when the app is reloaded. Contact your actual dental practice for care or appointments.</T>
+        <T v="title">About messages</T>
+        <T v="body" style={{ marginTop: space.md }}>Melissa Pike is the dentist contact shown in this preview. Dentist messaging is not connected yet. Saving a draft does not deliver it to Melissa.</T>
+        <T v="body" style={{ marginTop: space.md }}>The separate OraCare chatbot offers faster automated answers about readings and retainer care. It never replies as Melissa. Drafts and chatbot conversations reset on reload.</T>
         <T v="body" style={{ marginTop: space.md }}>For urgent symptoms, contact a dentist or emergency service directly.</T>
         <Button label="Got it" style={{ marginTop: space.lg }} onPress={() => setInfo(false)} />
       </BottomSheet>

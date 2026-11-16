@@ -11,7 +11,7 @@ import { BIOMARKERS, BIOMARKER_COLORS, BIOMARKER_ORDER, BiomarkerId } from '../.
 import { parseTooth, RETAINER_TEETH, searchTeeth, toothByUniversal } from '../../domain/teeth';
 import { useStore } from '../../state/store';
 import RetainerView, { Selection } from '../../three/RetainerView';
-import { attentionSites } from '../../domain/attention';
+import { attentionSites, attentionLevel, ATTENTION_COLORS } from '../../domain/attention';
 import { siteTeeth } from '../../domain/sensorLayout';
 import { regionsForScan } from '../../three/regions';
 import { colors, font, radius, space } from '../../theme/tokens';
@@ -43,7 +43,13 @@ export default function Home() {
   const regions = useMemo(() => regionsForScan(latestScan, strip, sensorType), [latestScan, strip, sensorType, state.rev]);
 
   const flaggedSites = attentionSites(latestScan, strip, sensorType);
-  const attentionMarks = new Map(flaggedSites.flatMap(site => siteTeeth(site).map(tooth => [tooth, { color: colors.high }] as const)));
+  const attentionMarks = new Map<number, { color: string }>();
+  for (const site of flaggedSites) {
+    const color = ATTENTION_COLORS[attentionLevel(latestScan, site)];
+    for (const tooth of siteTeeth(site)) {
+      if (attentionMarks.get(tooth)?.color !== colors.high) attentionMarks.set(tooth, { color });
+    }
+  }
 
   const openTooth = (u: number) => {
     const a = toothByUniversal(u).arch;
@@ -117,7 +123,7 @@ export default function Home() {
             )}
             <View style={{ paddingBottom: space.md }}>
               <BiomarkerLegend only={[]} />
-              <T v="small" style={{ textAlign: 'center', marginTop: space.sm, color: colors.textSecondary }}>Red shading = readings to review. Tap a tooth.</T>
+              <T v="small" style={{ textAlign: 'center', marginTop: space.sm, color: colors.textSecondary }}>Orange: watch · Red: needs attention · Tap a tooth</T>
             </View>
           </View>
         </Section>
