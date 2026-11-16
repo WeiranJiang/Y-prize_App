@@ -16,7 +16,7 @@ import type { Arch } from '../domain/teeth';
 import { useStore } from '../state/store';
 import { STATUS_HEX } from '../three/regions';
 import { colors, radius, space } from '../theme/tokens';
-import { scanTimeLabel } from './(tabs)/index';
+import { scanTimeLabel } from '../domain/dates';
 
 type Range = '1' | '7' | '30' | '90';
 const RANGES: { key: Range; label: string }[] = [
@@ -126,7 +126,7 @@ export default function BiomarkerDetail() {
         ) : (
           <View style={styles.empty}>
             <T v="small">No scans in this period</T>
-            <Meta style={{ marginTop: 4 }}>Choose a longer range or run a scan.</Meta>
+            <Meta style={{ marginTop: 4 }}>Choose a longer range or wait for the next case sync.</Meta>
           </View>
         )}
       </View>

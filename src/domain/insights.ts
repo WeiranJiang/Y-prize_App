@@ -188,12 +188,12 @@ export function buildInsights(
       interpreted: 'The value was withheld rather than estimated. Low signal here matches film build-up on the strip at this location, not a property of your teeth.',
       recommended: fouling
         ? 'Replace the sensing strip before your next scan. A repeat scan on this strip is unlikely to recover the signal.'
-        : 'Repeat the scan. Make sure the retainer is seated against the tray guides before closing the lid.',
+        : 'Before the next automatic readout, make sure the retainer is seated against the tray guides before closing the lid.',
       criterion: `Signal-quality floor: SNR ≥ ${health?.limits.snrFloor ?? 15}. Readings below it are never shown as measurements.`,
       siteIds: a.withheld.map((r) => r.site.id),
       confidence: 'High',
       priority: fouling ? 70 : 60,
-      action: fouling ? { label: 'Strip health', href: '/strip' } : { label: 'Retry scan', href: '/scan' },
+      action: fouling ? { label: 'Strip health', href: '/strip' } : { label: 'Scan history', href: '/overview' },
     });
   }
 
@@ -228,12 +228,12 @@ export function buildInsights(
       summary: `The strip was read ${scan.readoutDelayMin.toFixed(0)} min after removal; the protocol window is ${scan.readoutWindowMin} min.`,
       observed: `Readout delay ${scan.readoutDelayMin.toFixed(1)} min (window ${scan.readoutWindowMin} min).`,
       interpreted: 'Local chemistry on the strip can change once it is out of the mouth, so these values may not reflect in-mouth conditions.',
-      recommended: 'Repeat the scan, placing the retainer in the case promptly after removal.',
+      recommended: 'Place the retainer in the case promptly after removal for the next automatic readout.',
       criterion: `Protocol readout window: ${scan.readoutWindowMin} min (configurable).`,
       siteIds: [],
       confidence: 'High',
       priority: 65,
-      action: { label: 'Retry scan', href: '/scan' },
+      action: { label: 'Scan history', href: '/overview' },
     });
   }
 

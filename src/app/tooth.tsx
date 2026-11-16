@@ -15,7 +15,7 @@ import { parseTooth, retainerTeeth, toothByUniversal, toothNumber } from '../dom
 import { useStore } from '../state/store';
 import { STATUS_HEX } from '../three/regions';
 import { colors, font, radius, space } from '../theme/tokens';
-import { scanTimeLabel } from './(tabs)/index';
+import { scanTimeLabel } from '../domain/dates';
 
 const ORDER: SurfaceId[] = ['buccal', 'mesial', 'distal', 'lingual', 'gingival', 'occlusal'];
 

@@ -3,7 +3,7 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { colors } from '../theme/tokens';
 
 export type IconName =
-  | 'home' | 'scan' | 'explore' | 'trends' | 'profile' | 'case' | 'chevron' | 'chevronLeft' | 'close'
+  | 'home' | 'explore' | 'trends' | 'profile' | 'case' | 'chevron' | 'chevronLeft' | 'close'
   | 'info' | 'strip' | 'check' | 'alert' | 'refresh' | 'search' | 'drop' | 'spark' | 'layers' | 'clock' | 'compare' | 'chat' | 'box' | 'pulse' | 'send' | 'zoom' | 'play' | 'pause';
 
 export default function Icon({ name, size = 22, color = colors.text, strokeWidth = 1.4 }: { name: IconName; size?: number; color?: string; strokeWidth?: number }) {
@@ -13,13 +13,6 @@ export default function Icon({ name, size = 22, color = colors.text, strokeWidth
       {name === 'home' && (
         <>
           <Path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z" {...p} />
-        </>
-      )}
-      {name === 'scan' && (
-        <>
-          <Rect x="3.5" y="7" width="17" height="11" rx="5.5" {...p} />
-          <Path d="M7 12.5c1.6-2.2 8.4-2.2 10 0" {...p} />
-          <Path d="M8 4.5h8" {...p} />
         </>
       )}
       {name === 'explore' && (

@@ -21,11 +21,11 @@ npm run typecheck
 |---|---|
 | **Home** | Upper/Lower toggle, biomarker filter, the interactive point-cloud retainer, one status line, dental-arch map, tooth search, insights and recommendations. Tapping a tooth (3D, arch map or search) opens the **magnifier**: a circular zoomed 3D view of that tooth with its readings. |
 | **Trends** | Pick a biomarker and tap a tooth to see its current readings and history; all-sites small multiples, neighbouring-site comparison, persistent findings, measurement reliability, before/after 3D compare |
-| **Overview** | Whole-mouth summary: share of readings in range, direction of travel, upper vs lower, a tile per biomarker, consistent vs watch list |
+| **Overview** | Whole-mouth summary: share of readings in range, direction of travel, upper vs lower, a tile per biomarker, last recorded scans and month/year scan activity calendars |
 | **Ask** | Chat assistant grounded in the user's own readings (on-device by default; optional Claude backend, see below) |
 | **Strips** | Strips in use, spares at home, automatic (subscription) or manual reordering, order history (demo, no payments) |
 
-Other routes: `/scan` (tap the case chip on Home), `/profile` (icon on Home), `/strip` (strip health), `/compare`, `/scan-details`, `/about`.
+Other routes: `/profile` (icon on Home), `/strip` (strip health), `/compare`, `/scan-details`, `/about`.
 
 ## Ask: optional Claude backend
 
@@ -42,7 +42,7 @@ The app sends the question, recent turns and a compact, de-identified summary of
 
 Neutral, clinical dark UI: background `#0A0A0A`, surfaces `#141414` / `#1A1A1A` / `#242424`, borders `#303030`, text `#F5F5F5` / `#989898` / `#696969`. Colour is reserved for medical status and always paired with a label: green `#39A76D` (in range), amber `#D6A34A` (borderline), red `#E05252` (needs attention). SF Pro (system font) with tabular numbers. 8-pt spacing, 12–18px radii, flat surfaces, no shadows. Primary buttons are white with black text, and selection controls are iOS-style segmented controls. Charts use thin white lines, status-coloured markers, a shaded research range and touch-to-inspect.
 
-Key screens: Home dashboard, `/biomarker?id=` (biomarker detail with 1D/7D/30D/90D history and per-location list), `/tooth?u=` (tooth-level schematic with measurement locations and readings), `/scan` (full-screen scan flow).
+Key screens: Home dashboard, `/biomarker?id=` (biomarker detail with 1D/7D/30D/90D history and per-location list), `/tooth?u=` (tooth-level schematic with measurement locations and readings).
 
 ## Arches and biomarkers
 
@@ -66,7 +66,7 @@ Rule-based (R1–R8). Each insight records its rule, biomarker, sites, threshold
 
 ## 3D (`src/three/`)
 
-`retainerGeometry.ts` builds ~24k points procedurally from anatomical crown dimensions along a parabolic arch: superellipse cross-sections, cusps, incisal edges and a scalloped gingival skirt. `regions.ts` colours only each sensor's measured footprint, with a soft fall-off and a dotted boundary ring. Withheld sites are slate, never "healthy". `RetainerView.tsx` handles drag rotation with inertia, pinch and wheel zoom, double-tap reset, tap picking, camera focus, the floating label, the scan-beam mode and shared cameras for comparisons.
+`retainerGeometry.ts` builds ~24k points procedurally from anatomical crown dimensions along a parabolic arch: superellipse cross-sections, cusps, incisal edges and a scalloped gingival skirt. `regions.ts` colours only each sensor's measured footprint, with a soft fall-off and a dotted boundary ring. Withheld sites are slate, never "healthy". `RetainerView.tsx` handles drag rotation with inertia, pinch and wheel zoom, double-tap reset, tap picking, camera focus, the floating label and shared cameras for comparisons.
 
 ## Extending to new biomarkers
 
@@ -87,3 +87,9 @@ Server checks: `cd server && npm run typecheck && npx tsx --test security.test.t
 Import [this repository into Vercel](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FWeiranJiang%2FY-prize_App). Choose the repository root, then deploy. `vercel.json` sets the Expo web export command, `dist` output, SPA route fallback, and security headers. Vercel supplies a shareable HTTPS URL after deployment. For a project already connected to this repository, the next deployment picks up these settings automatically.
 
 The hosted demo uses simulated readings and the offline Ask guide by default. The optional Node chat server is a separate service; this static deployment does not run `server/index.ts`. To enable live Ask, deploy that service separately, set `EXPO_PUBLIC_CHAT_URL` to its HTTPS `/chat` endpoint in Vercel before building, and allow your Vercel site's exact origin in the backend's `CHAT_ALLOWED_ORIGINS`.
+
+## Automatic scan history
+
+Manual scan screens, buttons, timers and scan simulations have been removed. The app displays recorded readouts; live case/BLE syncing is not yet wired into this prototype. The existing demo history stays simulated and does not generate new scans in the background.
+
+Overview shows the latest upper and lower readouts, a month calendar and a horizontally scrollable GitHub-style year calendar. Tap a day to see its sessions and open the recorded scan details. Activity colours show sessions per day, not dental health; paired upper/lower records within the same minute count as one session. Calendar days follow the device’s local timezone.

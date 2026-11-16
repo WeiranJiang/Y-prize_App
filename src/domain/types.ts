@@ -106,11 +106,3 @@ export interface StripLimits {
   /** Minimum share of usable sites before readings are considered incomplete. */
   usableMin: number;
 }
-
-export interface Protocol {
-  /** Demo / engineering wear timer — not a validated clinical duration. */
-  sessionMinutes: number;
-  /** Readout must happen within this many minutes after removal. */
-  readoutWindowMin: number;
-  label: string;
-}

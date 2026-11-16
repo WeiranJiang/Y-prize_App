@@ -344,7 +344,7 @@ function general(q: string, ctx: AssistantContext): Reply | null {
     };
   if (has(q, /how (do|to) (i )?scan|start a scan|scanning|the case/))
     return {
-      text: 'Tap the scan icon at the top of Home. Wear your retainer with the strip for the session, take it out, place it in the case’s tray, lined up with the guides, and close the lid. The case reads both retainers and your results appear within a few seconds. Try to read it within 5 minutes of taking it out, and don’t rinse the strip first.',
+      text: 'There’s no scan button: the case handles scanning automatically. Overview shows your last recorded scans and a calendar of scan history. The current prototype displays simulated history; live hardware syncing is not connected in this demo.',
     };
   if (has(q, /magnif|zoom|timeline|drag/))
     return {

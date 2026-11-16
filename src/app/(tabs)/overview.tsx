@@ -1,3 +1,4 @@
+import ScanHistory from '../../components/ScanHistory';
 import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -92,6 +93,8 @@ export default function Overview() {
         <T v="bodyStrong" style={{ marginTop: space.lg }}>{o.overall == null ? 'No readings yet' : `${DIR[o.direction].arrow} ${DIR[o.direction].word}`}</T>
         <T v="small" style={{ marginTop: space.sm, paddingHorizontal: space.lg, textAlign: 'center' }}>Based on measured sites, not a score of overall dental health.</T>
       </View>
+
+      <ScanHistory />
 
       {watch.length ? <Section title="Worth a closer look"><T v="body">{watch.map(b => BIOMARKERS[b.id].shortName).join(', ')} {watch.length === 1 ? 'has' : 'have'} flagged readings or a worsening trend. Open a measurement below to see where.</T></Section> : null}
       {/* Biomarkers */}

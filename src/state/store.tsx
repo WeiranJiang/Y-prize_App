@@ -1,11 +1,11 @@
 import React, { createContext, useCallback, useContext, useMemo, useReducer } from 'react';
 import { BIOMARKERS, Bands } from '../domain/biomarkers';
-import { buildDemoHistory, DEFAULT_LIMITS, makeStrip, simulateNextScan } from '../domain/demo';
+import { buildDemoHistory, DEFAULT_LIMITS, makeStrip } from '../domain/demo';
 import { computeStripHealth, StripHealth } from '../domain/fouling';
 import { buildInsights, Insight, Recommendation } from '../domain/insights';
 import type { ScanAnalysis } from '../domain/analysis';
 import type { Arch, NumberingSystem } from '../domain/teeth';
-import type { Protocol, Scan, Strip, StripLimits } from '../domain/types';
+import type { Scan, Strip, StripLimits } from '../domain/types';
 
 export type CaseStatus = 'connected' | 'disconnected' | 'scanning' | 'syncing';
 
@@ -33,7 +33,6 @@ export interface Settings {
   view: ViewLevel;
   /** Which arch every screen is showing. */
   arch: Arch;
-  protocol: Protocol;
   limits: StripLimits;
   pHBands: Bands;
 }
@@ -42,7 +41,6 @@ interface State {
   strips: Strip[];
   scans: Scan[];
   currentStripIds: Record<Arch, string>;
-  globalCount: number;
   settings: Settings;
   caseStatus: CaseStatus;
   caseBattery: number;
@@ -70,12 +68,10 @@ function initial(): State {
     strips: demo.strips,
     scans: demo.scans,
     currentStripIds: { upper: current('upper'), lower: current('lower') },
-    globalCount: demo.globalCount,
     settings: {
       numbering: 'universal',
       view: 'consumer',
       arch: 'upper',
-      protocol: { sessionMinutes: 10, readoutWindowMin: 5, label: 'Engineering demo protocol' },
       limits: { ...DEFAULT_LIMITS },
       pHBands: { ...BIOMARKERS.pH.bands },
     },
@@ -100,7 +96,7 @@ const DEFAULT_PH = { ...BIOMARKERS.pH.bands };
 function reducer(s: State, a: Action): State {
   switch (a.type) {
     case 'addScans':
-      return { ...s, scans: [...s.scans, ...a.scans], globalCount: s.globalCount + 1 };
+      return { ...s, scans: [...new Map([...s.scans, ...a.scans].map(scan => [scan.id, scan])).values()] };
     case 'replaceStrip': {
       const arch = s.settings.arch;
       const n = s.strips.length + 1;
@@ -155,8 +151,6 @@ interface Derived {
   insights: Insight[];
   recommendations: Recommendation[];
   dispatch: React.Dispatch<Action>;
-  /** Simulate a case readout of both retainers; returns the selected arch's scan. */
-  runDemoScan: () => Scan;
   scanById: (id: string) => Scan | undefined;
   stripById: (id: string) => Strip | undefined;
 }
@@ -195,17 +189,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [latestScan, latestStrip, archScans, health, state.settings.numbering, state.rev]);
 
-  const runDemoScan = useCallback(() => {
-    const now = new Date();
-    const scans = (['upper', 'lower'] as Arch[]).map((a) => {
-      const st = stripFor(a);
-      const prev = sorted.filter((s) => s.stripId === st.id).pop();
-      return simulateNextScan(st, prev, state.globalCount + 1, state.settings.protocol.sessionMinutes, state.settings.protocol.readoutWindowMin, state.settings.limits, now);
-    });
-    dispatch({ type: 'addScans', scans });
-    return scans[arch === 'upper' ? 0 : 1];
-  }, [sorted, stripFor, state.globalCount, state.settings, arch]);
-
   const value: Derived = {
     state,
     arch,
@@ -221,7 +204,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     insights: built?.insights ?? [],
     recommendations: built?.recommendations ?? [],
     dispatch,
-    runDemoScan,
     scanById: (id) => state.scans.find((s) => s.id === id),
     stripById: (id) => state.strips.find((s) => s.id === id),
   };

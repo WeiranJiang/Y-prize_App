@@ -65,15 +65,7 @@ export default function Profile() {
       </Section>
 
       <Section>
-        <Disclosure title="Advanced demo settings" summary="Measurement timing, research thresholds and replacement limits">
-      <Section title="Measurement protocol" style={{ paddingHorizontal: 0, marginTop: space.md }}>
-        <Card>
-          <Step label="Wear timer" value={`${s.protocol.sessionMinutes} min`} onMinus={() => dispatch({ type: 'settings', patch: { protocol: { ...s.protocol, sessionMinutes: Math.max(1, s.protocol.sessionMinutes - 1) } } })} onPlus={() => dispatch({ type: 'settings', patch: { protocol: { ...s.protocol, sessionMinutes: s.protocol.sessionMinutes + 1 } } })} />
-          <Step label="Readout window" value={`${s.protocol.readoutWindowMin} min`} onMinus={() => dispatch({ type: 'settings', patch: { protocol: { ...s.protocol, readoutWindowMin: Math.max(1, s.protocol.readoutWindowMin - 1) } } })} onPlus={() => dispatch({ type: 'settings', patch: { protocol: { ...s.protocol, readoutWindowMin: s.protocol.readoutWindowMin + 1 } } })} />
-          <T v="small" style={{ marginTop: space.sm }}>Engineering / demo protocol. Durations are not clinically validated.</T>
-        </Card>
-      </Section>
-
+        <Disclosure title="Advanced demo settings" summary="Research thresholds and replacement limits">
       <Section title="Research thresholds · pH" style={{ paddingHorizontal: 0 }}>
         <Card>
           <Step label="Mild below" value={B.mild.toFixed(1)} onMinus={() => setB({ mild: r1(Math.max(B.elevated + 0.1, B.mild - 0.1)) })} onPlus={() => setB({ mild: r1(B.mild + 0.1) })} />

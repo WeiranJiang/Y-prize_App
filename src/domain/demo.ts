@@ -366,32 +366,5 @@ export function buildDemoHistory(now: Date, limits: StripLimits = DEFAULT_LIMITS
   lowerA.retiredAt = morning(14, 21, 0).toISOString();
   lowerA.retiredReason = 'Validated use period complete';
 
-  return { strips: [upperA, lowerA, upperB, lowerB], scans, globalCount: g };
-}
-
-/** Simulate one more scan on a strip (used by the Scan flow in demo mode). */
-export function simulateNextScan(
-  strip: Strip,
-  prev: Scan | undefined,
-  globalIndex: number,
-  sessionMinutes: number,
-  readoutWindowMin: number,
-  limits: StripLimits,
-  now = new Date(),
-): Scan {
-  const elapsedH = prev ? (now.getTime() - new Date(prev.at).getTime()) / 3600000 : 0;
-  // Exposure grows with time out of the case; in the demo we cap a rapid re-scan at the session length.
-  const added = prev ? Math.min(9, Math.max(sessionMinutes / 60, elapsedH * 0.38)) : 0;
-  return simulateScan({
-    strip,
-    at: now,
-    sessionIndex: (prev?.stripId === strip.id ? prev.sessionIndex : 0) + 1,
-    globalIndex,
-    exposureHours: prev?.stripId === strip.id ? prev.exposureHours + added : 0,
-    sessionMinutes,
-    readoutDelayMin: 1.2,
-    readoutWindowMin,
-    limits,
-    seed: (strip.arch === 'upper' ? 5000 : 7000) + globalIndex,
-  });
+  return { strips: [upperA, lowerA, upperB, lowerB], scans };
 }

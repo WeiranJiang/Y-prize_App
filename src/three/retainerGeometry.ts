@@ -189,21 +189,3 @@ export function buildRetainerCloud(arch: Arch = 'upper'): PointCloud {
     offset: off,
   };
 }
-
-/** Contoured scanning-tray outline (dim points) used in the Scan animation. */
-export function buildTrayCloud(arch: Arch = 'upper'): Float32Array {
-  const pts: number[] = [];
-  const frames = archFrames(arch).filter((f) => f.tooth.position <= 7);
-  const C = ARCH_CENTER[arch];
-  const off = [-C[0], -C[1], -C[2]];
-  for (const f of frames) {
-    for (let t = -f.w / 2; t <= f.w / 2; t += 0.9) {
-      for (let n = -9; n <= 9; n += 0.9) {
-        const y = -3.2 + 0.045 * n * n;
-        const p = localToModel(f, t, n, y);
-        pts.push(p[0] + off[0], p[1] + off[1], p[2] + off[2]);
-      }
-    }
-  }
-  return new Float32Array(pts);
-}

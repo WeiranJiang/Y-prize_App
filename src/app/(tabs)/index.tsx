@@ -13,16 +13,6 @@ import RetainerView, { Selection } from '../../three/RetainerView';
 import { regionsForScan, STATUS_HEX } from '../../three/regions';
 import { colors, font, radius, space } from '../../theme/tokens';
 
-export function scanTimeLabel(iso: string) {
-  const d = new Date(iso);
-  const today = new Date();
-  const y = new Date(Date.now() - 86400000);
-  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-  if (d.toDateString() === today.toDateString()) return `Today, ${time}`;
-  if (d.toDateString() === y.toDateString()) return `Yesterday, ${time}`;
-  return `${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}, ${time}`;
-}
-
 export default function Home() {
   const params = useLocalSearchParams<{ tooth?: string }>();
   const { latestScan, stripById, analysis, insights, recommendations, state, arch, setArch } = useStore();
@@ -84,11 +74,6 @@ export default function Home() {
             <IconButton name="search" label="Search teeth" onPress={() => setSearching((v) => !v)} />
             <IconButton name="profile" label="Profile" onPress={() => router.push('/profile')} />
           </View>
-        </View>
-
-        <View style={{ paddingHorizontal: space.lg, marginTop: space.lg }}>
-          <Button label="Start a scan" icon="scan" onPress={() => router.push('/scan')} />
-          <Meta style={{ marginTop: space.sm }}>{latestScan ? `Last scan: ${scanTimeLabel(latestScan.at)}` : 'No scans yet. Start with your first scan.'}</Meta>
         </View>
 
         {searching ? (

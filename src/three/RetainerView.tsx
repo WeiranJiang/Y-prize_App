@@ -11,7 +11,7 @@ import { Animated, GestureResponderEvent, LayoutChangeEvent, PanResponder, Platf
 import * as THREE from 'three';
 import { frameFor } from '../domain/arch';
 import type { Arch } from '../domain/teeth';
-import { buildRetainerCloud, buildTrayCloud, PointCloud } from './retainerGeometry';
+import { buildRetainerCloud, PointCloud } from './retainerGeometry';
 import { paintCloud, Region } from './regions';
 
 export interface CameraState {
@@ -48,8 +48,6 @@ interface Props {
   focusTooth?: number | null;
   interactive?: boolean;
   autoRotate?: boolean;
-  /** Scan animation: beam position 0–1, tray visible, colours hidden until `colorReveal`. */
-  scan?: { beam: number; colorReveal: number } | null;
   /** Fade the cloud in on mount. */
   reveal?: boolean;
   /** Share one camera between several views (before/after comparison). */
@@ -63,9 +61,7 @@ interface Props {
 }
 
 const CLOUDS: Partial<Record<Arch, PointCloud>> = {};
-const TRAYS: Partial<Record<Arch, Float32Array>> = {};
 const getCloud = (a: Arch) => (CLOUDS[a] ??= buildRetainerCloud(a));
-const getTray = (a: Arch) => (TRAYS[a] ??= buildTrayCloud(a));
 
 const VERT = /* glsl */ `
 attribute vec3 aColor;
@@ -78,10 +74,7 @@ uniform float uSize;
 uniform float uScale;
 uniform float uSelTooth;
 uniform float uSelRegion;
-uniform float uBeamX;
-uniform float uScanMode;
 uniform float uReveal;
-uniform float uColorAmt;
 uniform float uNear;
 uniform float uFar;
 varying vec3 vColor;
@@ -97,9 +90,8 @@ void main() {
   float light = 0.5 + 0.38 * diff + 0.32 * rim;
   float depth = -mv.z;
   float fog = clamp(1.0 - (depth - uNear) / (uFar - uNear), 0.28, 1.0);
-  vec3 neutral = vec3(0.91, 0.91, 0.91);
-  vec3 col = mix(neutral, aColor, uColorAmt);
-  float colored = step(0.0, aRegion) * uColorAmt;
+  vec3 col = aColor;
+  float colored = step(0.0, aRegion);
   float a = light * fog;
   float size = uSize * (0.82 + 0.36 * aRand);
   if (uSelTooth > 0.0) {
@@ -116,15 +108,6 @@ void main() {
   size *= 1.0 + colored * 0.55;
   a *= 1.0 + colored * 0.45;
   vGlow = colored;
-  if (uScanMode > 0.5) {
-    float d = position.x - uBeamX;
-    float beam = exp(-d * d / 9.0);
-    float read = 1.0 - smoothstep(-1.5, 1.5, d);
-    a *= mix(0.18, 1.0, read);
-    col = mix(col, vec3(1.0, 1.0, 1.0), beam * 0.85);
-    a += beam * 0.8;
-    size *= 1.0 + beam * 0.7;
-  }
   float rv = smoothstep(aRand * 0.75, aRand * 0.75 + 0.25, uReveal);
   a *= rv;
   a *= 0.93 + 0.07 * sin(uTime * 1.2 + aRand * 40.0);
@@ -147,27 +130,6 @@ void main() {
   // Coloured (measured) points carry a soft halo so regions read as light, not paint.
   float halo = vGlow * smoothstep(0.5, 0.0, d) * 0.35;
   gl_FragColor = vec4(vColor * (0.85 + 0.3 * min(vAlpha, 1.2)), max(core * 0.75, halo + core) * clamp(vAlpha, 0.0, 1.0));
-}
-`;
-
-const TRAY_VERT = /* glsl */ `
-uniform float uScale;
-uniform float uBeamX;
-varying float vA;
-void main() {
-  vec4 mv = modelViewMatrix * vec4(position, 1.0);
-  float d = position.x - uBeamX;
-  vA = 0.16 + 0.5 * exp(-d * d / 14.0);
-  gl_PointSize = max(1.0, 0.24 * uScale / -mv.z);
-  gl_Position = projectionMatrix * mv;
-}
-`;
-const TRAY_FRAG = /* glsl */ `
-varying float vA;
-void main() {
-  vec2 c = gl_PointCoord - 0.5;
-  if (length(c) > 0.5) discard;
-  gl_FragColor = vec4(0.55, 0.55, 0.55, vA);
 }
 `;
 
@@ -418,10 +380,7 @@ export default function RetainerView(props: Props) {
       uScale: { value: H / (2 * Math.tan((camera.fov * Math.PI) / 360)) },
       uSelTooth: { value: 0 },
       uSelRegion: { value: -1 },
-      uBeamX: { value: -999 },
-      uScanMode: { value: 0 },
       uReveal: { value: p.current.reveal ? 0 : 1 },
-      uColorAmt: { value: 1 },
       uNear: { value: 60 },
       uFar: { value: 180 },
     };
@@ -434,16 +393,6 @@ export default function RetainerView(props: Props) {
       blending: THREE.NormalBlending,
     });
     group.add(new THREE.Points(geo, mat));
-
-    const trayGeo = new THREE.BufferGeometry();
-    trayGeo.setAttribute('position', new THREE.BufferAttribute(getTray(p.current.arch ?? 'upper'), 3));
-    const trayUniforms = { uScale: uniforms.uScale, uBeamX: uniforms.uBeamX };
-    const tray = new THREE.Points(
-      trayGeo,
-      new THREE.ShaderMaterial({ vertexShader: TRAY_VERT, fragmentShader: TRAY_FRAG, uniforms: trayUniforms, transparent: true, depthWrite: false }),
-    );
-    tray.visible = false;
-    group.add(tray);
 
     projector.current = { camera, group };
     const t0 = Date.now();
@@ -529,17 +478,6 @@ export default function RetainerView(props: Props) {
       uniforms.uSelTooth.value = pr.selectedTooth ?? 0;
       uniforms.uSelRegion.value = pr.selectedSiteId ? regionIds.current.indexOf(pr.selectedSiteId) : -1;
       if (pr.reveal && uniforms.uReveal.value < 1) uniforms.uReveal.value = Math.min(1, uniforms.uReveal.value + 0.012);
-      if (pr.scan) {
-        uniforms.uScanMode.value = 1;
-        uniforms.uBeamX.value = -42 + pr.scan.beam * 84;
-        uniforms.uColorAmt.value = pr.scan.colorReveal;
-        tray.visible = true;
-      } else {
-        uniforms.uScanMode.value = 0;
-        uniforms.uColorAmt.value = 1;
-        tray.visible = false;
-      }
-
       // Floating label position
       if (pr.labelPos && pr.selectedSiteId) {
         const r = pr.regions.find((x) => x.id === pr.selectedSiteId);
