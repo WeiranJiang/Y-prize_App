@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  item: { flex: 1, alignItems: 'center', gap: 3, paddingTop: 2 },
+  item: { flex: 1, minHeight: 48, justifyContent: 'center', alignItems: 'center', gap: 4, paddingTop: 2 },
   indicator: { width: 16, height: 2, borderRadius: 1, marginBottom: 4, backgroundColor: 'transparent' },
-  label: { fontFamily: font.family, fontWeight: '500', fontSize: 10, letterSpacing: 0.1 },
+  label: { fontFamily: font.family, fontWeight: '500', fontSize: 11, letterSpacing: 0.1 },
 });

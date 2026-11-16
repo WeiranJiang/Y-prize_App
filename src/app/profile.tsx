@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Disclosure from '../components/Disclosure';
 import StripHealthCard from '../components/StripHealthCard';
-import { Card, DemoBadge, Divider, Row, Screen, Section, Segmented, T } from '../components/ui';
+import { Card, DemoBadge, Divider, IconButton, Row, Screen, Section, Segmented, T } from '../components/ui';
 import { useStore } from '../state/store';
 import { colors, space } from '../theme/tokens';
 
@@ -29,6 +30,7 @@ export default function Profile() {
 
   return (
     <Screen>
+      <View style={{ paddingHorizontal: space.lg, marginBottom: space.md }}><IconButton name="chevronLeft" label="Back" onPress={() => router.canGoBack() ? router.back() : router.navigate('/')} /></View>
       <View style={{ paddingHorizontal: space.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <View>
           <T v="display">Profile</T>
@@ -59,10 +61,12 @@ export default function Profile() {
         <T v="small" style={{ marginBottom: 8 }}>Tooth numbering</T>
         <Segmented style={{ paddingHorizontal: 0 }} options={[{ key: 'universal', label: 'Universal (1–32)' }, { key: 'fdi', label: 'FDI (11–48)' }]} value={s.numbering} onChange={(k) => dispatch({ type: 'settings', patch: { numbering: k } })} />
         <T v="small" style={{ marginVertical: 8, marginTop: space.lg }}>Detail level</T>
-        <Segmented style={{ paddingHorizontal: 0 }} options={[{ key: 'consumer', label: 'Consumer' }, { key: 'research', label: 'Research / clinical' }]} value={s.view} onChange={(k) => dispatch({ type: 'settings', patch: { view: k } })} />
+        <Segmented style={{ paddingHorizontal: 0 }} options={[{ key: 'consumer', label: 'Everyday' }, { key: 'research', label: 'Research' }]} value={s.view} onChange={(k) => dispatch({ type: 'settings', patch: { view: k } })} />
       </Section>
 
-      <Section title="Measurement protocol">
+      <Section>
+        <Disclosure title="Advanced demo settings" summary="Measurement timing, research thresholds and replacement limits">
+      <Section title="Measurement protocol" style={{ paddingHorizontal: 0, marginTop: space.md }}>
         <Card>
           <Step label="Wear timer" value={`${s.protocol.sessionMinutes} min`} onMinus={() => dispatch({ type: 'settings', patch: { protocol: { ...s.protocol, sessionMinutes: Math.max(1, s.protocol.sessionMinutes - 1) } } })} onPlus={() => dispatch({ type: 'settings', patch: { protocol: { ...s.protocol, sessionMinutes: s.protocol.sessionMinutes + 1 } } })} />
           <Step label="Readout window" value={`${s.protocol.readoutWindowMin} min`} onMinus={() => dispatch({ type: 'settings', patch: { protocol: { ...s.protocol, readoutWindowMin: Math.max(1, s.protocol.readoutWindowMin - 1) } } })} onPlus={() => dispatch({ type: 'settings', patch: { protocol: { ...s.protocol, readoutWindowMin: s.protocol.readoutWindowMin + 1 } } })} />
@@ -70,7 +74,7 @@ export default function Profile() {
         </Card>
       </Section>
 
-      <Section title="Research thresholds · pH">
+      <Section title="Research thresholds · pH" style={{ paddingHorizontal: 0 }}>
         <Card>
           <Step label="Mild below" value={B.mild.toFixed(1)} onMinus={() => setB({ mild: r1(Math.max(B.elevated + 0.1, B.mild - 0.1)) })} onPlus={() => setB({ mild: r1(B.mild + 0.1) })} />
           <Step label="Elevated below" value={B.elevated.toFixed(1)} onMinus={() => setB({ elevated: r1(Math.max(B.high + 0.1, B.elevated - 0.1)) })} onPlus={() => setB({ elevated: r1(Math.min(B.mild - 0.1, B.elevated + 0.1)) })} />
@@ -79,14 +83,17 @@ export default function Profile() {
         </Card>
       </Section>
 
-      <Section title="Strip replacement limits">
+      <Section title="Strip replacement limits" style={{ paddingHorizontal: 0 }}>
         <Card>
           <Step label="Replace below clarity" value={`${Math.round(L.clarityReplace * 100)}%`} onMinus={() => setL({ clarityReplace: r2(Math.max(0.4, L.clarityReplace - 0.01)) })} onPlus={() => setL({ clarityReplace: r2(Math.min(L.claritySoon - 0.01, L.clarityReplace + 0.01)) })} />
           <Step label="Replace soon below" value={`${Math.round(L.claritySoon * 100)}%`} onMinus={() => setL({ claritySoon: r2(Math.max(L.clarityReplace + 0.01, L.claritySoon - 0.01)) })} onPlus={() => setL({ claritySoon: r2(Math.min(0.95, L.claritySoon + 0.01)) })} />
-          <Step label="Validated use period" value={`${L.maxDays} days`} onMinus={() => setL({ maxDays: Math.max(1, L.maxDays - 1) })} onPlus={() => setL({ maxDays: L.maxDays + 1 })} />
+          <Step label="Demo use period" value={`${L.maxDays} days`} onMinus={() => setL({ maxDays: Math.max(1, L.maxDays - 1) })} onPlus={() => setL({ maxDays: L.maxDays + 1 })} />
           <Step label="Max sessions" value={`${L.maxSessions}`} onMinus={() => setL({ maxSessions: Math.max(1, L.maxSessions - 1) })} onPlus={() => setL({ maxSessions: L.maxSessions + 1 })} />
           <Step label="Min usable sites" value={`${Math.round(L.usableMin * 100)}%`} onMinus={() => setL({ usableMin: r2(Math.max(0.5, L.usableMin - 0.05)) })} onPlus={() => setL({ usableMin: r2(Math.min(1, L.usableMin + 0.05)) })} />
         </Card>
+      </Section>
+
+        </Disclosure>
       </Section>
 
       <Section title="About">

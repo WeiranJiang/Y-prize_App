@@ -113,10 +113,10 @@ export default function SiteDetail({ siteId, showExplore = true }: { siteId: str
 
       {showExplore ? (
         <Button
-          label="Open in Explore"
+          label="View reading history"
           kind="secondary"
           style={{ marginTop: space.lg }}
-          onPress={() => router.navigate({ pathname: '/explore', params: { tooth: String(r.site.toothUniversal), site: r.site.id } })}
+          onPress={() => router.navigate({ pathname: '/trends', params: { tooth: String(r.site.toothUniversal), bio: r.site.biomarker } })}
         />
       ) : null}
     </View>

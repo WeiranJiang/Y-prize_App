@@ -1,6 +1,7 @@
 import { router, useIsFocused } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import Disclosure from '../components/Disclosure';
 import BottomSheet from '../components/BottomSheet';
 import LineChart from '../components/charts/LineChart';
 import { replaceEta } from '../components/StripHealthCard';
@@ -72,17 +73,10 @@ export default function StripHealth() {
                   <T v="small">around {h.forecast.date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</T>
                 ) : null}
               </View>
-              <View style={{ alignItems: 'flex-end', justifyContent: 'flex-end' }}>
-                {h.forecast ? (
-                  <>
-                    <T v="small" style={{ fontSize: 11 }}>Forecast fit R² {h.forecast.r2.toFixed(2)}</T>
-                    <T v="small" style={{ fontSize: 11 }}>{h.forecast.n} scans · {(h.forecast.rate * 100 * h.hoursPerSession).toFixed(1)}% / session</T>
-                  </>
-                ) : (
-                  <T v="small" style={{ fontSize: 11, textAlign: 'right' }}>Forecast needs{'\n'}3+ scans</T>
-                )}
-              </View>
             </View>
+            <Disclosure title="Forecast details" summary={h.forecast ? `Based on ${h.forecast.n} scans` : 'At least 3 scans needed'}>
+              {h.forecast ? <T v="small">Fit R² {h.forecast.r2.toFixed(2)} · {(h.forecast.rate * 100 * h.hoursPerSession).toFixed(1)}% clarity loss per session</T> : <T v="small">Scan a few more times to estimate replacement timing.</T>}
+            </Disclosure>
             <Divider style={{ marginVertical: space.lg }} />
             <Gauge label="Optical clarity" value={h.clarity ?? 1} display={h.clarity != null ? pct(h.clarity) : '—'} limit={`limit ${pct(L.clarityReplace)}`} status={h.clarity == null ? 'unavailable' : h.clarity < L.clarityReplace ? 'high' : h.clarity < L.claritySoon ? 'elevated' : h.clarity < 0.85 ? 'mild' : 'normal'} marks={[L.clarityReplace, L.claritySoon]} />
             <Gauge label="Use period" value={h.daysInUse / L.maxDays} display={`Day ${Math.floor(h.daysInUse) + 1} of ${L.maxDays}`} limit="" status={h.daysInUse >= L.maxDays ? 'high' : L.maxDays - h.daysInUse <= 2 ? 'elevated' : 'normal'} />
@@ -90,6 +84,8 @@ export default function StripHealth() {
             <Gauge label="Usable sites" value={h.usableFraction ?? 1} display={h.usableFraction != null ? pct(h.usableFraction) : '—'} limit={`min ${pct(L.usableMin)}`} status={h.usableFraction == null ? 'unavailable' : h.usableFraction < L.usableMin ? 'elevated' : 'normal'} marks={[L.usableMin]} />
           </Card>
         </Section>
+
+        <View style={{ paddingHorizontal: space.lg, marginTop: space.lg }}><Button label="I've replaced my strip" style={{ marginTop: space.xl }} onPress={() => setConfirm(true)} /></View>
 
         <Section title="Optical clarity over time">
           <Card>
@@ -221,11 +217,12 @@ export default function StripHealth() {
           </Card>
         </Section>
 
-        <Section title="How replacement is decided">
+        <Section>
+          <Disclosure title="How replacement is decided" summary="Limits and the method behind the forecast">
           <T v="small">
             {`• Replace now when clarity is below ${pct(L.clarityReplace)}, fewer than ${pct(L.usableMin - 0.25)} of sites are usable, or the ${L.maxDays}-day / ${L.maxSessions}-session validated limit is reached.\n• Replace soon when clarity is below ${pct(L.claritySoon)}, the forecast reaches the limit within 3 sessions, or usable sites fall below ${pct(L.usableMin)}.\n• Forecast: exponential attenuation fitted to the last 8 scans on this strip.\n\nThese are configurable engineering thresholds (Profile → Thresholds), not validated clinical limits.`}
           </T>
-          <Button label="I've replaced my strip" style={{ marginTop: space.xl }} onPress={() => setConfirm(true)} />
+          </Disclosure>
         </Section>
       </Screen>
 

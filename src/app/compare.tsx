@@ -62,7 +62,7 @@ export default function Compare() {
       </View>
       <View style={{ paddingHorizontal: space.lg, marginTop: space.lg }}>
         <T v="display">Compare scans</T>
-        <T v="small" style={{ marginTop: 4 }}>Identical camera, colour scale and anatomical registration.</T>
+        <T v="small" style={{ marginTop: 4 }}>Compare the same teeth across two scans. Drag to inspect the change.</T>
         <View style={{ marginTop: space.md }}>
           <ArchToggle />
         </View>

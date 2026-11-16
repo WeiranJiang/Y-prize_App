@@ -134,12 +134,12 @@ export default function Chat() {
         ))}
         {busy ? (
           <View style={[styles.bubble, styles.bot, { paddingVertical: 12 }]}>
-            <T v="small" style={{ letterSpacing: 2 }}>•••</T>
+            <T v="small">Thinking…</T>
           </View>
         ) : null}
         {!busy && last.role === 'assistant' && last.suggestions?.length ? (
           <View style={styles.suggest}>
-            {last.suggestions.map((s) => (
+            {last.suggestions.slice(0, 3).map((s) => (
               <Pressable key={s} onPress={() => send(s)} disabled={waiting} style={({ pressed }) => [styles.chip, (pressed || waiting) && { opacity: 0.6 }]}>
                 <T v="small" style={{ color: colors.text }}>{s}</T>
               </Pressable>

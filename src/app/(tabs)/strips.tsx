@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Disclosure from '../../components/Disclosure';
 import BottomSheet from '../../components/BottomSheet';
 import { replaceEta } from '../../components/StripHealthCard';
-import { Button, Card, Divider, Meter, Screen, Section, Segmented, StatusDot, T } from '../../components/ui';
+import { Button, Card, DemoBadge, Divider, Meter, Screen, Section, Segmented, StatusDot, T } from '../../components/ui';
 import { pct, STATE_COLOR_KEY } from '../../domain/fouling';
 import type { Arch } from '../../domain/teeth';
 import { useStore } from '../../state/store';
@@ -49,7 +50,7 @@ export default function Strips() {
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <Screen>
         <View style={{ paddingHorizontal: space.lg }}>
-          <T v="display">Strips</T>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}><T v="display">Strips</T><DemoBadge /></View>
           <T v="small" style={{ marginTop: 2 }}>Your sensing strips and deliveries</T>
         </View>
 
@@ -65,7 +66,7 @@ export default function Strips() {
                     <T v="bodyStrong">{a === 'upper' ? 'Upper' : 'Lower'} strip</T>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <StatusDot status={key} />
-                      <T v="small" style={{ color: colors.text }}>Replace in {replaceEta(h).toLowerCase()}</T>
+                      <T v="small" style={{ color: colors.text }}>{h.state === 'now' ? 'Replace now' : `Replace in ${replaceEta(h).toLowerCase()}`}</T>
                     </View>
                   </View>
                   <View style={{ marginTop: space.md }}>
@@ -109,9 +110,11 @@ export default function Strips() {
               </T>
               <T v="small" style={{ marginTop: 4, fontSize: 12 }}>We ship when you’re down to {plan.reorderAt} spare, based on how fast your strips wear.</T>
               <Divider style={{ marginVertical: space.lg }} />
+              <Disclosure title="Delivery settings" summary={`${plan.perBox.upper} upper + ${plan.perBox.lower} lower per box`}>
               <Row label="Upper per box"><Stepper value={plan.perBox.upper} onChange={(v) => setPlan({ perBox: { ...plan.perBox, upper: v } })} /></Row>
               <Row label="Lower per box"><Stepper value={plan.perBox.lower} onChange={(v) => setPlan({ perBox: { ...plan.perBox, lower: v } })} /></Row>
               <Row label="Ship when spares reach"><Stepper value={plan.reorderAt} min={0} max={3} onChange={(v) => setPlan({ reorderAt: v })} /></Row>
+              </Disclosure>
               <Divider style={{ marginVertical: space.md }} />
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <T v="small">${(plan.perBox.upper + plan.perBox.lower) * PRICE} per box · demo, no charge</T>
@@ -126,13 +129,14 @@ export default function Strips() {
               <Row label="Lower strips"><Stepper value={qty.lower} onChange={(v) => setQty({ ...qty, lower: v })} /></Row>
               <Divider style={{ marginVertical: space.md }} />
               <T v="small">${(qty.upper + qty.lower) * PRICE} · arrives in about 3 days · demo, no charge</T>
-              <Button label="Order now" style={{ marginTop: space.lg }} disabled={qty.upper + qty.lower === 0} onPress={() => setConfirm(true)} />
+              <Button label="Create demo order" style={{ marginTop: space.lg }} disabled={qty.upper + qty.lower === 0} onPress={() => setConfirm(true)} />
             </Card>
           )}
         </Section>
 
         {/* Orders */}
-        <Section title="Orders">
+        <Section>
+          <Disclosure title="Order history" summary={`${orders.length} demo order${orders.length === 1 ? '' : 's'}`}>
           <Card style={{ paddingVertical: 4 }}>
             {orders.length === 0 ? (
               <T v="small" style={{ paddingVertical: space.md }}>No orders yet</T>
@@ -150,15 +154,16 @@ export default function Strips() {
               ))
             )}
           </Card>
+          </Disclosure>
           <T v="small" style={{ marginTop: space.md, color: colors.textMuted, fontSize: 11 }}>Demo only. No real orders or payments are made.</T>
         </Section>
       </Screen>
 
       <BottomSheet open={confirm} onClose={() => setConfirm(false)}>
-        <T v="title">Confirm order</T>
+        <T v="title">Confirm demo order</T>
         <T v="body" style={{ marginTop: space.md }}>{qty.upper} upper and {qty.lower} lower strips · ${(qty.upper + qty.lower) * PRICE}</T>
         <Button
-          label="Place order"
+          label="Place demo order"
           style={{ marginTop: space.xl }}
           onPress={() => {
             dispatch({ type: 'order', qty, kind: 'manual', at: new Date() });
@@ -181,8 +186,8 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 const styles = StyleSheet.create({
-  step: { width: 30, height: 30, borderRadius: 15, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairlineStrong, alignItems: 'center', justifyContent: 'center' },
-  pill: { paddingHorizontal: 14, height: 30, borderRadius: 999, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairlineStrong, alignItems: 'center', justifyContent: 'center' },
+  step: { width: 44, height: 44, borderRadius: 15, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairlineStrong, alignItems: 'center', justifyContent: 'center' },
+  pill: { paddingHorizontal: 14, minHeight: 44, borderRadius: 999, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairlineStrong, alignItems: 'center', justifyContent: 'center' },
   order: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
   border: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.hairline },
 });

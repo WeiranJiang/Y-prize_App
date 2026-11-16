@@ -5,12 +5,13 @@
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Disclosure from '../../components/Disclosure';
 import ArchDiagram from '../../components/ArchDiagram';
 import ArchToggle from '../../components/ArchToggle';
 import LineChart, { LPoint } from '../../components/charts/LineChart';
 import Icon from '../../components/Icon';
 import RangeSlider from '../../components/RangeSlider';
-import { DemoBadge, Meta, Screen, Section, StatusDot, StatusTag, T } from '../../components/ui';
+import { Button, DemoBadge, Legend, Meta, Screen, Section, StatusDot, StatusTag, T } from '../../components/ui';
 import { analyzeScan, siteSeries, siteTitle } from '../../domain/analysis';
 import { BIOMARKER_ORDER, BIOMARKERS, BiomarkerId, classify, formatDelta, formatValue, Status, STATUS_RANK, unitSuffix } from '../../domain/biomarkers';
 import { parseTooth, toothByUniversal, toothNumber } from '../../domain/teeth';
@@ -35,6 +36,7 @@ export default function Findings() {
   const { state, arch, setArch, stripById } = useStore();
   const numbering = state.settings.numbering;
   const [bios, setBios] = useState<BiomarkerId[]>(['pH', 'lactate', 'calcium']);
+  const [showAll, setShowAll] = useState(false);
   const [tooth, setTooth] = useState<number | null>(parseTooth(params.tooth));
 
   const scans = useMemo(
@@ -95,6 +97,8 @@ export default function Findings() {
     .filter((f) => f.flagged > 0)
     .sort((x, y) => STATUS_RANK[y.worst] - STATUS_RANK[x.worst] || y.flagged - x.flagged);
 
+  useEffect(() => setShowAll(false), [arch, bios, range]);
+
   const toggle = (id: BiomarkerId) =>
     setBios((cur) => (cur.includes(id) ? (cur.length > 1 ? cur.filter((x) => x !== id) : cur) : BIOMARKER_ORDER.filter((x) => x === id || cur.includes(x))));
 
@@ -102,6 +106,8 @@ export default function Findings() {
   const x1 = win.length ? +new Date(win[win.length - 1].at) : 1;
   const xd: [number, number] = x1 - x0 < 3600000 ? [x0 - 6 * 3600000, x1 + 6 * 3600000] : [x0, x1];
   const selTooth = tooth != null && toothByUniversal(tooth).arch === arch ? tooth : null;
+
+  const measuredBios = bios.filter(id => endStrip?.sites.some(site => site.toothUniversal === selTooth && site.biomarker === id));
 
   return (
     <Screen>
@@ -112,6 +118,9 @@ export default function Findings() {
         <DemoBadge />
       </View>
 
+      <T v="small" style={{ paddingHorizontal: space.lg, marginTop: space.sm }}>Review flagged readings, then tap a tooth to see its history.</T>
+      <View style={{ marginHorizontal: space.lg, marginTop: space.md }}>
+      <Disclosure title="Measurements" summary={bios.map(id => BIOMARKERS[id].shortName).join(' · ')}>
       {/* Biomarker multi-select */}
       <View style={styles.chips}>
         {BIOMARKER_ORDER.map((id) => {
@@ -125,6 +134,9 @@ export default function Findings() {
         })}
       </View>
 
+      <Meta style={{ marginTop: space.sm }}>Choose one or more measurements. At least one stays selected.</Meta>
+      </Disclosure>
+      </View>
       {/* Time range */}
       <View style={styles.rangeBox}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
@@ -133,12 +145,26 @@ export default function Findings() {
           </T>
           <Meta>{win.length} scan{win.length === 1 ? '' : 's'}</Meta>
         </View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.sm }}>
+          {[7, 14, 30].map(days => {
+            const start = scans.findIndex(scan => +new Date(scan.at) >= +(new Date(scans[last]?.at ?? 0)) - days * 86400000);
+            const selected = i0 === Math.max(0, start) && i1 === last;
+            return <Pressable key={days} accessibilityRole="button" accessibilityLabel={`Show last ${days} days`} accessibilityState={{ selected }} onPress={() => {
+              const end = scans[last];
+              if (!end) return;
+              const start = scans.findIndex(scan => +new Date(scan.at) >= +new Date(end.at) - days * 86400000);
+              setRange([Math.max(0, start), last]);
+            }} style={[styles.chip, selected && styles.chipOn]}><T v="small">{days} days</T></Pressable>;
+          })}
+        </View>
+        <Disclosure title="Custom dates">
         {scans.length > 1 ? <RangeSlider count={scans.length} value={[i0, i1]} onChange={setRange} breaks={breaks} /> : null}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Meta style={{ fontSize: 11 }}>{scans[0] ? fmtDay(scans[0].at) : ''}</Meta>
           <Meta style={{ fontSize: 11 }}>Drag the ends or the middle</Meta>
           <Meta style={{ fontSize: 11 }}>{scans[last] ? fmtDay(scans[last].at) : ''}</Meta>
         </View>
+        </Disclosure>
       </View>
 
       {/* Map at end of range */}
@@ -147,23 +173,19 @@ export default function Findings() {
           <View style={{ paddingHorizontal: 6, paddingTop: space.sm }}>
             <ArchDiagram key={arch} arch={arch} marks={marks} selected={selTooth} onSelect={setTooth} numbering={numbering} />
           </View>
+          <View style={{ paddingBottom: space.md }}><Legend /></View>
+          <Meta style={{ textAlign: 'center', padding: space.sm }}>Map shows the last scan in your selected dates</Meta>
         </View>
       </Section>
 
       {/* Selected tooth */}
       {selTooth != null ? (
-        <Section title={`${toothNumber(toothByUniversal(selTooth), numbering)} · ${toothByUniversal(selTooth).name}`}>
+        <Section title={`${toothNumber(toothByUniversal(selTooth), numbering)} · ${toothByUniversal(selTooth).name}`} action={<Button label="Clear" compact kind="ghost" onPress={() => setTooth(null)} />}>
           <View style={{ gap: space.sm }}>
-            {bios.map((id) => {
+            {!measuredBios.length ? <View style={[styles.panel, { padding: space.lg }]}><T v="body">No sensors for the selected measurements on this tooth. Choose another tooth or change Measurements above.</T></View> : null}
+            {measuredBios.map((id) => {
               const b = BIOMARKERS[id];
               const tSites = (endStrip?.sites ?? []).filter((s) => s.toothUniversal === selTooth && s.biomarker === id);
-              if (!tSites.length)
-                return (
-                  <View key={id} style={[styles.panel, { padding: space.lg, flexDirection: 'row', justifyContent: 'space-between' }]}>
-                    <T v="small" style={{ color: colors.textSecondary }}>{b.name}</T>
-                    <Meta>No sensor on this tooth</Meta>
-                  </View>
-                );
               const series = tSites.map((s, k) => ({
                 id: s.id,
                 label: siteTitle(s, numbering).surface,
@@ -186,8 +208,8 @@ export default function Findings() {
                     const end = ser[ser.length - 1]?.value ?? null;
                     const st = classify(end, b.bands);
                     return (
-                      <View key={s.id} style={styles.valRow}>
-                        <T v="small" style={{ flex: 1, color: colors.text }} numberOfLines={1}>{siteTitle(s, numbering).surface}</T>
+                      <View key={s.id} style={[styles.valRow, { flexWrap: 'wrap' }]}>
+                        <T v="small" style={{ flexGrow: 1, flexBasis: '100%', color: colors.text }}>{siteTitle(s, numbering).surface}</T>
                         <T v="bodyStrong" style={{ fontVariant: ['tabular-nums'] }}>
                           {formatValue(b, end)}
                           <T v="small" style={{ color: colors.textMuted }}>{unitSuffix(b)}</T>
@@ -235,15 +257,15 @@ export default function Findings() {
       ) : null}
 
       {/* Findings in range */}
-      <Section title="In this range">
+      <Section title={`Flagged readings (${findings.length})`}>
         <View style={styles.panel}>
           {findings.length === 0 ? (
             <View style={{ padding: space.lg, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <StatusDot status="normal" />
-              <T v="small" style={{ color: colors.text }}>Everything stayed in range</T>
+              <T v="small" style={{ color: colors.text }}>{!endAnalysis || !sites.length ? 'No readings for these filters' : 'No flagged readings in the available scans'}</T>
             </View>
           ) : (
-            findings.map((f, i) => {
+            (showAll ? findings : findings.slice(0, 5)).map((f, i) => {
               const t = siteTitle(f.s, numbering);
               const on = selTooth === f.s.toothUniversal;
               return (
@@ -255,7 +277,7 @@ export default function Findings() {
                   <StatusDot status={f.worst} size={6} />
                   <View style={{ flex: 1 }}>
                     <T v="small" style={{ color: colors.text }} numberOfLines={1}>{f.b.shortName} · {t.number} {t.surface.toLowerCase()}</T>
-                    <Meta style={{ fontSize: 11 }}>{f.flagged} of {f.total} scans flagged</Meta>
+                    <Meta style={{ fontSize: 11 }}>{f.flagged} of {f.total} scans flagged · {f.worst === 'unavailable' ? 'Not measured' : f.b.statusWords[f.worst]}</Meta>
                   </View>
                   <T v="small" style={{ fontVariant: ['tabular-nums'], color: colors.text }}>{formatValue(f.b, f.end)}{unitSuffix(f.b)}</T>
                   <T v="small" style={{ width: 52, textAlign: 'right', fontVariant: ['tabular-nums'] }}>{f.delta != null ? formatDelta(f.b, f.delta) : '—'}</T>
@@ -264,6 +286,8 @@ export default function Findings() {
             })
           )}
         </View>
+        {findings.length > 5 ? <Button kind="ghost" label={showAll ? 'Show fewer readings' : `Show all ${findings.length} readings`} onPress={() => setShowAll(v => !v)} /> : null}
+        <Meta style={{ marginTop: space.sm }}>Values are the latest available in this range; changes compare the first and last available readings.</Meta>
       </Section>
     </Screen>
   );
@@ -271,8 +295,8 @@ export default function Findings() {
 
 const styles = StyleSheet.create({
   head: { paddingHorizontal: space.lg, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: space.lg, marginTop: space.lg },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 32, paddingHorizontal: 12, borderRadius: 8, backgroundColor: colors.bg2, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: space.sm },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 44, paddingHorizontal: 12, borderRadius: 8, backgroundColor: colors.bg2, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   chipOn: { backgroundColor: colors.surfaceRaised, borderColor: colors.textSecondary },
   rangeBox: { marginHorizontal: space.lg, marginTop: space.lg, padding: space.lg, paddingBottom: space.md, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   panel: { backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, overflow: 'hidden' },

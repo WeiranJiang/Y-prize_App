@@ -21,9 +21,9 @@ import { scanTimeLabel } from './(tabs)/index';
 type Range = '1' | '7' | '30' | '90';
 const RANGES: { key: Range; label: string }[] = [
   { key: '1', label: '1D' },
-  { key: '7', label: '7D' },
-  { key: '30', label: '30D' },
-  { key: '90', label: '90D' },
+  { key: '7', label: '7 days' },
+  { key: '30', label: '30 days' },
+  { key: '90', label: '90 days' },
 ];
 
 function niceTicks(lo: number, hi: number, n = 4) {

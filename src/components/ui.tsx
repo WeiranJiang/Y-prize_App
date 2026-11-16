@@ -19,7 +19,7 @@ export function Screen({ children, scroll = true, contentStyle }: { children: Re
   const insets = useSafeAreaInsets();
   if (!scroll) return <View style={[styles.screen, { paddingTop: insets.top }]}>{children}</View>;
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={[{ paddingTop: insets.top + space.sm, paddingBottom: 112 }, contentStyle]} showsVerticalScrollIndicator={false}>
+    <ScrollView style={styles.screen} contentContainerStyle={[{ paddingTop: insets.top + space.sm, paddingBottom: 112 + insets.bottom, width: '100%', maxWidth: 760, alignSelf: 'center' }, contentStyle]} showsVerticalScrollIndicator={false}>
       {children}
     </ScrollView>
   );
@@ -43,7 +43,7 @@ export function Section({ title, action, children, style }: { title?: string; ac
     <View style={[{ paddingHorizontal: space.lg, marginTop: space.xl + space.sm }, style]}>
       {(title || action) && (
         <View style={styles.sectionHead}>
-          {title ? <T v="label">{title}</T> : <View />}
+          {title ? <T v="label" style={{ flex: 1, marginRight: space.sm }}>{title}</T> : <View />}
           {action}
         </View>
       )}
@@ -109,6 +109,7 @@ export function Segmented<K extends string>({
         return (
           <Pressable
             key={o.key}
+            disabled={o.disabled}
             onPress={() => onChange(o.key)}
             style={[styles.segItem, fill && { flex: 1 }, on && styles.segOn, o.disabled && { opacity: 0.4 }]}
             accessibilityRole="button"
@@ -149,6 +150,8 @@ export function Button({ label, onPress, kind = 'primary', icon, style, disabled
   const primary = kind === 'primary';
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled }}
       onPress={onPress}
       disabled={disabled}
       style={({ pressed }) => [
@@ -227,7 +230,7 @@ export function Legend({ items, showUnmeasured = true }: { title?: string; items
 
 export function IconButton({ name, onPress, style, label }: { name: IconName; onPress: () => void; style?: StyleProp<ViewStyle>; label?: string }) {
   return (
-    <Pressable onPress={onPress} hitSlop={8} accessibilityLabel={label} style={({ pressed }) => [styles.iconBtn, pressed && { backgroundColor: colors.surfaceRaised }, style]}>
+    <Pressable onPress={onPress} hitSlop={4} accessibilityRole="button" accessibilityLabel={label ?? (name === 'chevronLeft' ? 'Back' : name)} style={({ pressed }) => [styles.iconBtn, pressed && { backgroundColor: colors.surfaceRaised }, style]}>
       <Icon name={name} size={18} color={colors.text} />
     </Pressable>
   );
@@ -259,7 +262,7 @@ const styles = StyleSheet.create({
   },
   tag: { flexDirection: 'row', alignItems: 'center' },
   seg: { flexDirection: 'row', padding: 2, borderRadius: 10, backgroundColor: colors.bg2, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, alignSelf: 'flex-start' },
-  segItem: { minWidth: 52, paddingHorizontal: 12, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  segItem: { minWidth: 52, paddingHorizontal: 12, minHeight: 44, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   segOn: { backgroundColor: colors.surfaceRaised },
   segText: { fontFamily: font.family, fontWeight: '500', fontSize: 13, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
   tabText: { fontFamily: font.family, fontWeight: '500', fontSize: 15, color: colors.textMuted },
@@ -268,5 +271,5 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, gap: 8 },
   demo: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, alignSelf: 'flex-start' },
   legend: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 14, paddingHorizontal: space.lg },
-  iconBtn: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  iconBtn: { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
 });

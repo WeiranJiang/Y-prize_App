@@ -5,7 +5,7 @@ import ArchDiagram from '../../components/ArchDiagram';
 import ArchToggle from '../../components/ArchToggle';
 import Icon from '../../components/Icon';
 import Loupe from '../../components/Loupe';
-import { Divider, IconButton, Legend, Meta, Screen, Section, StatusDot, T } from '../../components/ui';
+import { Button, DemoBadge, IconButton, Legend, Meta, Screen, Section, Segmented, StatusDot, T } from '../../components/ui';
 import { STATUS_RANK } from '../../domain/biomarkers';
 import { parseTooth, RETAINER_TEETH, searchTeeth, toothByUniversal } from '../../domain/teeth';
 import { useStore } from '../../state/store';
@@ -30,6 +30,8 @@ export default function Home() {
   const strip = latestScan ? stripById(latestScan.stripId) : undefined;
   const [loupe, setLoupe] = useState<number | null>(null);
   const [searching, setSearching] = useState(false);
+  const [mapView, setMapView] = useState<'3d' | 'chart'>('3d');
+  const [allRecommendations, setAllRecommendations] = useState(false);
   const [query, setQuery] = useState('');
   const numbering = state.settings.numbering;
   const H = Dimensions.get('window').height;
@@ -68,7 +70,6 @@ export default function Home() {
 
   const findings = insights.filter((i) => i.kind !== 'routine' && i.kind !== 'stable').slice(0, 4);
   const results = query ? searchTeeth(query, numbering).filter((t) => RETAINER_TEETH.includes(t)).slice(0, 6) : [];
-  const today = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -76,14 +77,18 @@ export default function Home() {
         {/* Header */}
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
-            <T v="label">{today}</T>
+            <DemoBadge />
             <T v="display" style={{ marginTop: 4 }}>Oral health</T>
           </View>
           <View style={{ flexDirection: 'row', gap: space.sm }}>
-            <IconButton name="scan" label="Start scan" onPress={() => router.push('/scan')} />
             <IconButton name="search" label="Search teeth" onPress={() => setSearching((v) => !v)} />
             <IconButton name="profile" label="Profile" onPress={() => router.push('/profile')} />
           </View>
+        </View>
+
+        <View style={{ paddingHorizontal: space.lg, marginTop: space.lg }}>
+          <Button label="Start a scan" icon="scan" onPress={() => router.push('/scan')} />
+          <Meta style={{ marginTop: space.sm }}>{latestScan ? `Last scan: ${scanTimeLabel(latestScan.at)}` : 'No scans yet. Start with your first scan.'}</Meta>
         </View>
 
         {searching ? (
@@ -112,17 +117,20 @@ export default function Home() {
         {/* Tooth map */}
         <Section title="Tooth map" action={<ArchToggle onChange={() => setLoupe(null)} />}>
           <View style={styles.mapCard}>
-            <View style={{ height: Math.max(360, H * 0.44) }}>
-              <RetainerView key={arch} arch={arch} style={{ flex: 1 }} regions={regions} reveal selectedTooth={loupe} onSelect={onSelect} active={focused && loupe == null} />
-              <View pointerEvents="none" style={styles.hint}>
-                <Icon name="zoom" size={12} color={colors.textMuted} />
-                <T v="small" style={{ fontSize: 11, color: colors.textMuted }}>Tap a tooth to inspect</T>
+            <Segmented fill style={{ paddingHorizontal: space.md, paddingTop: space.md }} options={[{ key: '3d', label: '3D view' }, { key: 'chart', label: 'Tooth chart' }]} value={mapView} onChange={setMapView} />
+            {mapView === '3d' ? (
+              <View style={{ height: Math.max(360, H * 0.44) }}>
+                <RetainerView key={arch} arch={arch} style={{ flex: 1 }} regions={regions} reveal selectedTooth={loupe} onSelect={onSelect} active={focused && loupe == null} />
+                <View pointerEvents="none" style={styles.hint}>
+                  <T v="small">Tap a tooth for readings · drag to rotate</T>
+                </View>
               </View>
-            </View>
-            <Divider />
-            <View style={{ paddingHorizontal: 6, paddingTop: space.sm }}>
-              <ArchDiagram key={arch} arch={arch} marks={marks} selected={loupe} onSelect={openTooth} numbering={numbering} />
-            </View>
+            ) : (
+              <View style={{ paddingHorizontal: 6, paddingTop: space.sm, paddingBottom: space.md }}>
+                <ArchDiagram key={arch} arch={arch} marks={marks} selected={loupe} onSelect={openTooth} numbering={numbering} />
+                <Meta style={{ textAlign: 'center' }}>Tap a numbered tooth to see its readings</Meta>
+              </View>
+            )}
             <View style={{ paddingBottom: space.md }}>
               <Legend />
             </View>
@@ -130,8 +138,9 @@ export default function Home() {
         </Section>
 
         {/* Findings */}
-        <Section title="Findings">
+        <Section title="Areas to review" action={<Pressable accessibilityRole="button" onPress={() => router.push('/trends')} style={{ minHeight: 44, justifyContent: 'center' }}><T v="small" style={{ color: colors.text }}>View all ›</T></Pressable>}>
           <View style={styles.list}>
+            {!findings.length ? <T v="body" style={{ padding: space.lg }}>No flagged findings in the latest scan. Keep your usual routine.</T> : null}
             {findings.map((i, idx) => (
               <Pressable
                 key={i.id}
@@ -153,9 +162,10 @@ export default function Home() {
           </View>
         </Section>
 
-        <Section title="Recommended">
+        <Section title="Your next steps">
           <View style={styles.list}>
-            {recommendations.map((r, idx) => {
+            {!recommendations.length ? <T v="body" style={{ padding: space.lg }}>Keep brushing twice daily with fluoride toothpaste and cleaning between your teeth.</T> : null}
+            {(allRecommendations ? recommendations : recommendations.slice(0, 3)).map((r, idx) => {
               // Link each recommendation to the spot it is about (or to strip health).
               const ins = insights.find((i) => i.id === r.insightId);
               const site = ins?.siteIds.length ? analysis?.results.find((x) => x.site.id === ins.siteIds[0]) : undefined;
@@ -181,6 +191,7 @@ export default function Home() {
               );
             })}
           </View>
+          {recommendations.length > 3 ? <Button label={allRecommendations ? 'Show fewer steps' : `Show all ${recommendations.length} steps`} kind="ghost" onPress={() => setAllRecommendations(v => !v)} /> : null}
           <Pressable onPress={() => router.push('/about')} style={{ marginTop: space.lg }}>
             <Meta>Research indicators — not a diagnosis of decay or gum disease. How findings are made ›</Meta>
           </Pressable>

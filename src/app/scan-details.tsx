@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import Disclosure from '../components/Disclosure';
 import { Card, DemoBadge, IconButton, KV, Screen, Section, StatusDot, T } from '../components/ui';
 import { analyzeScan, confidenceOf, siteTitle } from '../domain/analysis';
 import { BIOMARKERS, formatValue, unitSuffix } from '../domain/biomarkers';
@@ -36,10 +37,12 @@ export default function ScanDetails() {
           <KV k="Areas to review" v={`${a.reviewSites.length}`} />
           <KV k="Strip" v={`${strip.arch === 'upper' ? 'Upper' : 'Lower'} · ${strip.id} · session ${scan.sessionIndex}${scan.baseline ? ' (baseline)' : ''}`} />
           <KV k="Strip clarity" v={pct(clarityOf(scan))} />
+          <Disclosure title="Technical details" summary="Wear time, exposure, calibration and readout timing">
           <KV k="Session wear" v={`${scan.sessionMinutes} min (demo protocol)`} />
           <KV k="Strip exposure" v={`${scan.exposureHours.toFixed(0)} h`} />
           <KV k="Readout delay" v={`${scan.readoutDelayMin.toFixed(1)} min · window ${scan.readoutWindowMin} min`} />
           <KV k="Calibration" v={scan.calibrationVersion} />
+          </Disclosure>
           <T v="small" style={{ marginTop: space.md }}>
             Values describe the strip's state at readout. They are not a record of the whole wear period.
           </T>
@@ -54,7 +57,7 @@ export default function ScanDetails() {
               <View key={r.site.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, borderTopWidth: i ? StyleSheet.hairlineWidth : 0, borderTopColor: colors.hairline }}>
                 <StatusDot status={r.status} />
                 <View style={{ flex: 1, marginLeft: 10 }}>
-                  <T v="small" style={{ color: colors.text }}>{r.site.id} · {BIOMARKERS[r.site.biomarker].shortName} · {t.number} {t.surface.toLowerCase()}{r.site.role === 'comparison' ? ' (comparison)' : ''}</T>
+                  <T v="small" style={{ color: colors.text }}>{BIOMARKERS[r.site.biomarker].shortName} · {t.number} {t.surface.toLowerCase()}{r.site.role === 'comparison' ? ' (comparison)' : ''}</T>
                   <T v="small" style={{ fontSize: 11 }}>
                     {r.reading.value == null ? 'Withheld: below signal floor' : `Quality ${confidenceOf(r.reading.quality).toLowerCase()} · SNR ${r.reading.snr.toFixed(0)}${r.reading.calibration === 'recalibrate' ? ' · recalibrate' : ''}`}
                   </T>
