@@ -127,11 +127,12 @@ export function buildOverview(scans: Scan[], strips: Strip[], days = 30): Overvi
       const st = classify(r.value, BIOMARKERS[id].bands);
       return st === 'elevated' || st === 'high';
     }).length;
-    const usable = readings.filter((r) => r.value != null);
+    const usable = readings.filter((r) => r.value != null && BIOMARKERS[id].bands.configured !== false);
     const inRange = usable.length ? usable.filter((r) => classify(r.value, BIOMARKERS[id].bands) === 'normal').length / usable.length : null;
-    return { id, inRange, sites: readings.length, concerns, direction: toDir(score), consistent: concerns === 0 && toDir(score) === 'steady', history, score };
+    return { id, inRange, sites: readings.length, concerns, direction: toDir(score), consistent: usable.length > 0 && concerns === 0 && toDir(score) === 'steady', history, score };
   });
-  const meanScore = biomarkers.reduce((a, b) => a + b.score, 0) / biomarkers.length;
+  const assessed = biomarkers.filter(b => BIOMARKERS[b.id].bands.configured !== false && b.inRange != null);
+  const meanScore = assessed.reduce((a, b) => a + b.score, 0) / Math.max(1, assessed.length);
   void o;
 
   return {

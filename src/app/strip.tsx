@@ -178,7 +178,7 @@ export default function StripHealth() {
         <Section>
           <Disclosure title="Reference spots">
           <Card style={{ paddingVertical: 6 }}>
-            {strip.sensorReferences.map(reference => <View key={reference.id} style={{ paddingVertical: space.md }}><T v="bodyStrong">{reference.label}</T><T v="body">{toothNumber(toothByUniversal(reference.toothUniversal), state.settings.numbering)} · {reference.height === 'gingival-margin' ? 'palatal/lingual gum margin' : 'palatal/lingual mid-crown'}</T></View>)}
+            {strip.sensorReferences.map(reference => <View key={reference.id} style={{ paddingVertical: space.md }}><T v="bodyStrong">{reference.label}</T><T v="body">{toothNumber(toothByUniversal(reference.toothUniversal), state.settings.numbering)} · {strip.arch === 'upper' ? 'palatal' : 'lingual'} {reference.height === 'gingival-margin' ? 'gum margin' : 'mid-crown'}</T></View>)}
           </Card>
           </Disclosure>
         </Section>

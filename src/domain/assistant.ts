@@ -1,3 +1,4 @@
+import { chatRequestBody } from './chatPayload';
 import { siteOnTooth, siteTeeth } from './sensorLayout';
 /**
  * OraCare assistant. A friendly, plain-spoken guide that answers questions about
@@ -95,7 +96,7 @@ function value(r: SiteResult) {
   const b = BIOMARKERS[r.site.biomarker];
   return r.reading.value == null ? 'no reading' : `${formatValue(b, r.reading.value)}${unitSuffix(b)}`;
 }
-/** "high acidity" for pH, otherwise "raised lactate", "low calcium". */
+/** "high acidity" for pH, otherwise "low calcium", "low ammonia". */
 function phrase(r: SiteResult) {
   const b = BIOMARKERS[r.site.biomarker];
   if (r.status === 'normal') return `${b.shortName === 'pH' ? 'pH' : lowerFirst(b.shortName)} in range`;
@@ -137,7 +138,8 @@ function movers(ctx: AssistantContext) {
 const interdental = (r: SiteResult) => r.site.surface === 'mesial' || r.site.surface === 'distal';
 
 function findTooth(q: string, n: NumberingSystem) {
-  const num = q.match(/(?:#|tooth\s*|number\s*)?\b(\d{1,2})\b/);
+  const clean = q.replace(/\ba?mmp[- ]?8\b/g, '');
+  const num = clean.match(/(?:#|\btooth\s*#?|\bnumber\s*#?)(\d{1,2})\b/) ?? clean.match(/^\s*(\d{1,2})\s*[?!.]?\s*$/);
   if (num) {
     const t = searchTeeth(num[1], n)[0];
     if (t) return t;
@@ -183,20 +185,20 @@ function attention(ctx: AssistantContext): Reply {
   };
 }
 
-function tooth(ctx: AssistantContext, u: number): Reply {
+function tooth(ctx: AssistantContext, u: number, bio?: BiomarkerId): Reply {
   const t = toothByUniversal(u);
   const snap = ctx.arches.find((a) => a.arch === t.arch);
-  const rows = (snap?.analysis?.results ?? []).filter((r) => siteOnTooth(r.site, u)).sort((a, b) => STATUS_RANK[b.status] - STATUS_RANK[a.status]);
+  const rows = (snap?.analysis?.results ?? []).filter((r) => siteOnTooth(r.site, u) && (!bio || r.site.biomarker === bio)).sort((a, b) => STATUS_RANK[b.status] - STATUS_RANK[a.status]);
   if (!rows.length)
-    return { text: `There isn’t a sensor on your ${lowerFirst(t.name)} (${toothNumber(t, ctx.numbering)}), so I don’t have readings for it. I won’t guess from neighbouring teeth, because conditions can differ a lot from one spot to the next.`, topic: { tooth: u } };
+    return { text: `There isn’t ${bio ? `a ${BIOMARKERS[bio].shortName} sensor` : 'a sensor'} on your ${lowerFirst(t.name)} (${toothNumber(t, ctx.numbering)}), so I don’t have readings for it. I won’t guess from neighbouring teeth, because conditions can differ a lot from one spot to the next.`, topic: { tooth: u } };
   const bad = rows.filter((r) => STATUS_RANK[r.status] >= 1);
   const lines = rows.slice(0, 5).map((r) => `• ${BIOMARKERS[r.site.biomarker].shortName} at the ${siteTitle(r.site).surface.toLowerCase()}: ${value(r)}, ${word(r)}`);
   let text = `Here’s your ${lowerFirst(t.name)} (${toothNumber(t, ctx.numbering)}):\n${lines.join('\n')}`;
   const tr = bad.length ? trendSentence(bad[0], ctx) : null;
   if (tr) text += `\n\n${tr}.`;
   if (bad.length >= 2) text += ` Several markers point the same way here, which makes it more likely to be a real local pattern than a one-off blip.`;
-  text += bad.length ? `\n\nWhat I’d do: ${COPY[bad[0].site.biomarker].advice(interdental(bad[0]))}` : `\n\nThe available readings are in range. aMMP-8 remains uncalibrated; this does not rule out a dental problem.`;
-  return { text, suggestions: bad.length ? ['Why is this happening?', 'How has it changed?', 'How do I floss properly?'] : ['How are my teeth overall?'], topic: { tooth: u, bio: bad[0]?.site.biomarker } };
+  text += !rows.some(r => r.reading.value != null) ? '\n\nThese locations have no calibrated reading, so no health conclusion can be drawn.' : bad.length ? `\n\nWhat I’d do: ${COPY[bad[0].site.biomarker].advice(interdental(bad[0]))}` : `\n\nThe available readings are in range. aMMP-8 remains uncalibrated; this does not rule out a dental problem.`;
+  return { text, suggestions: bad.length ? ['Why is this happening?', 'How has it changed?', 'How do I floss properly?'] : ['How are my teeth overall?'], topic: { tooth: u, bio: bio ?? bad[0]?.site.biomarker } };
 }
 
 function biomarker(ctx: AssistantContext, bio: BiomarkerId): Reply {
@@ -338,7 +340,7 @@ function general(q: string, ctx: AssistantContext): Reply | null {
     return {
       text: 'Healthy gums are firm, pink and don’t bleed when you brush. The best protection is gentle brushing angled at the gumline plus daily cleaning between teeth. Bleeding, swelling or receding gums are worth a dental visit. The strip can’t assess gum health directly.',
     };
-  if (has(q, /what (does|do) (the )?(colou?rs?|green|amber|red|yellow)|legend|what.*mean/))
+  if (has(q, /what (does|do) (the )?(colou?rs?|green|amber|red|yellow)|legend/))
     return {
       text: 'Sensor colours show chemistry: pink is ammonia, green is pH, blue is calcium, yellow is fluoride and purple is aMMP-8. Hollow rings are K⁺ or aMMP-8 background references. Status words beside each reading show whether it is in range; a colour alone does not mean a tooth is healthy or unhealthy.',
     };
@@ -376,6 +378,13 @@ export function answerLocally(question: string, ctx: AssistantContext, topic?: T
       suggestions: ['What should I tell my dentist?'],
     };
 
+  const requestedBio = BIO_WORDS.find(([re]) => re.test(q))?.[1];
+  if (requestedBio === 'aMMP8') {
+    const requestedTooth = findTooth(q, n);
+    return requestedTooth ? tooth(ctx, requestedTooth.universal, requestedBio) : biomarker(ctx, requestedBio);
+  }
+  if (requestedBio) topic = { ...topic, bio: requestedBio };
+
   if (has(q, /^(hi|hey|hello|yo|good (morning|afternoon|evening))\b/))
     return { text: 'Hi! I can walk you through your latest readings, explain what a number means, or help with everyday questions like flossing, drinks or retainer care. What’s on your mind?', suggestions: ['How are my teeth overall?', 'What should I do this week?', 'What about coffee?'] };
   if (has(q, /^(thanks|thank you|thx|cheers|great|ok|okay|cool|got it)\b/)) return { text: pick(q, ['Anytime. Shout if anything else comes up.', 'Happy to help. Good luck with it this week.', 'You’re welcome!']) };
@@ -409,7 +418,7 @@ export function answerLocally(question: string, ctx: AssistantContext, topic?: T
 
   // A specific tooth?
   const t = findTooth(q, n);
-  if (t) return tooth(ctx, t.universal);
+  if (t) return tooth(ctx, t.universal, requestedBio);
 
   // General knowledge first, so "acidic drinks" isn't read as a pH-readings question.
   const g = general(q, ctx);
@@ -447,7 +456,7 @@ export function contextSummary(ctx: AssistantContext) {
   return {
     data_source: 'simulated readings; aMMP-8 calibration not supplied',
     reference_spots: ctx.arches.flatMap(a => a.analysis?.strip.sensorReferences ?? []),
-    mapped_sites: ctx.arches.flatMap(a => (a.analysis?.results ?? []).map(r => ({ id: r.site.id, teeth: siteTeeth(r.site), biomarker: r.site.biomarker, location: siteTitle(r.site, ctx.numbering).surface, value: r.reading.value }))),
+    mapped_sites: { columns: ['id', 'teeth', 'biomarker', 'location', 'value'], rows: ctx.arches.flatMap(a => (a.analysis?.results ?? []).map(r => [r.site.id, siteTeeth(r.site), r.site.biomarker, siteTitle(r.site, ctx.numbering).surface, r.reading.value])) },
     overall_in_range: ctx.overview.overall,
     direction: ctx.overview.direction,
     by_arch: ctx.overview.byArch,
@@ -495,11 +504,7 @@ export async function ask(question: string, history: { role: 'user' | 'assistant
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({
-          question: q,
-          history: history.slice(-10).map((h) => ({ role: h.role, text: h.text.slice(0, 2000) })),
-          context: contextSummary(ctx),
-        }),
+        body: chatRequestBody(q, history, contextSummary(ctx)),
         signal: ctrl.signal,
       });
       if (res.status === 429) return { text: 'You’ve reached the live Ask limit. Please wait a little while before trying again.' };

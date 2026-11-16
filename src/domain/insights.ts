@@ -239,10 +239,10 @@ export function buildInsights(
       status: 'info',
       title: `${a.recalibrate.length} sensor${a.recalibrate.length > 1 ? 's' : ''} require${a.recalibrate.length > 1 ? '' : 's'} recalibration`,
       summary: 'Values from this sensor are still shown, with a wider uncertainty.',
-      observed: a.recalibrate.map((r) => `${r.site.id}: estimated drift ${r.reading.drift.toFixed(2)} pH`).join('; '),
+      observed: a.recalibrate.map((r) => `${r.site.id}: estimated drift ${formatValue(BIOMARKERS[r.site.biomarker], r.reading.drift)}${BIOMARKERS[r.site.biomarker].unit === 'pH' ? ' pH' : ` ${BIOMARKERS[r.site.biomarker].unit}`}`).join('; '),
       interpreted: 'The sensor chemistry has aged faster than the rest of the strip.',
       recommended: 'No action needed now. Replacing the strip resets calibration.',
-      criterion: 'Drift estimate > 0.12 pH units.',
+      criterion: 'Estimated drift exceeds the channel-specific demo calibration tolerance.',
       siteIds: a.recalibrate.map((r) => r.site.id),
       confidence: 'Moderate',
       priority: 30,
@@ -251,8 +251,8 @@ export function buildInsights(
 
   // Rule R7 — stability at normal sites
   const stable = a.results.filter((r) => {
-    if (r.site.role !== 'measure' || r.status !== 'normal') return false;
-    const s = siteSeries(r.site.id, stripScans).filter((p) => p.value != null && p.calibrationVersion === scan.calibrationVersion).slice(-4);
+    if (r.site.role !== 'measure' || r.site.biomarker !== 'pH' || r.status !== 'normal') return false;
+    const s = siteSeries(r.site.id, stripScans, r.site.biomarker).filter((p) => p.value != null && p.calibrationVersion === scan.calibrationVersion).slice(-4);
     if (s.length < 3) return false;
     const vs = s.map((p) => p.value as number);
     return Math.max(...vs) - Math.min(...vs) < 0.3;
