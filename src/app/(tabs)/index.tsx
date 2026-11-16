@@ -5,7 +5,7 @@ import ArchDiagram from '../../components/ArchDiagram';
 import ArchToggle from '../../components/ArchToggle';
 import Icon from '../../components/Icon';
 import Loupe from '../../components/Loupe';
-import { Button, DemoBadge, IconButton, Legend, Meta, Screen, Section, Segmented, StatusDot, T } from '../../components/ui';
+import { Button, IconButton, Legend, Meta, Screen, Section, Segmented, StatusDot, T } from '../../components/ui';
 import { STATUS_RANK } from '../../domain/biomarkers';
 import { parseTooth, RETAINER_TEETH, searchTeeth, toothByUniversal } from '../../domain/teeth';
 import { useStore } from '../../state/store';
@@ -67,7 +67,7 @@ export default function Home() {
         {/* Header */}
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
-            <DemoBadge />
+
             <T v="display" style={{ marginTop: 4 }}>Oral health</T>
           </View>
           <View style={{ flexDirection: 'row', gap: space.sm }}>

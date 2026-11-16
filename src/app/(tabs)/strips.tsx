@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import Disclosure from '../../components/Disclosure';
 import BottomSheet from '../../components/BottomSheet';
 import { replaceEta } from '../../components/StripHealthCard';
-import { Button, Card, DemoBadge, Divider, Meter, Screen, Section, Segmented, StatusDot, T } from '../../components/ui';
+import { Button, Card, Divider, Meter, Screen, Section, Segmented, StatusDot, T } from '../../components/ui';
 import { pct, STATE_COLOR_KEY } from '../../domain/fouling';
 import type { Arch } from '../../domain/teeth';
 import { useStore } from '../../state/store';
@@ -50,7 +50,7 @@ export default function Strips() {
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <Screen>
         <View style={{ paddingHorizontal: space.lg }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}><T v="display">Strips</T><DemoBadge /></View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}><T v="display">Strips</T></View>
           <T v="small" style={{ marginTop: 2 }}>Your sensing strips and deliveries</T>
         </View>
 

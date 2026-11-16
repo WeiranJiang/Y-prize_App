@@ -195,14 +195,6 @@ export function Meter({ value, status, height = 3, marks }: { value: number; sta
   );
 }
 
-export function DemoBadge({ style }: { style?: StyleProp<ViewStyle> }) {
-  return (
-    <View style={[styles.demo, style]}>
-      <T v="label" style={{ fontSize: 9.5, letterSpacing: 0.5 }}>Demo data</T>
-    </View>
-  );
-}
-
 /** Status key: in range / borderline / needs attention / not measured. */
 export function Legend({ items, showUnmeasured = true }: { title?: string; items?: { status: Status; label: string }[]; showUnmeasured?: boolean }) {
   const list = items ?? [
@@ -269,7 +261,6 @@ const styles = StyleSheet.create({
   btn: { height: 48, borderRadius: radius.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 20 },
   btnText: { fontFamily: font.family, fontWeight: '600', fontSize: 16 },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, gap: 8 },
-  demo: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, alignSelf: 'flex-start' },
   legend: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 14, paddingHorizontal: space.lg },
   iconBtn: { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
 });

@@ -11,7 +11,7 @@ import ArchToggle from '../../components/ArchToggle';
 import LineChart, { LPoint } from '../../components/charts/LineChart';
 import Icon from '../../components/Icon';
 import RangeSlider from '../../components/RangeSlider';
-import { Button, DemoBadge, Legend, Meta, Screen, Section, StatusDot, StatusTag, T } from '../../components/ui';
+import { Button, Legend, Meta, Screen, Section, StatusDot, StatusTag, T } from '../../components/ui';
 import { analyzeScan, siteSeries, siteTitle } from '../../domain/analysis';
 import { BIOMARKER_ORDER, BIOMARKERS, BiomarkerId, classify, formatDelta, formatValue, Status, STATUS_RANK, unitSuffix } from '../../domain/biomarkers';
 import { parseTooth, toothByUniversal, toothNumber } from '../../domain/teeth';
@@ -115,7 +115,7 @@ export default function Findings() {
         <View style={{ flex: 1 }}>
           <T v="display">Findings</T>
         </View>
-        <DemoBadge />
+
       </View>
 
       <T v="small" style={{ paddingHorizontal: space.lg, marginTop: space.sm }}>Review flagged readings, then tap a tooth to see its history.</T>

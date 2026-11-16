@@ -1,6 +1,6 @@
 /**
- * Deterministic demo data. Everything here is SIMULATED and is labelled
- * "Demo data" in the UI. The generator uses a simple optical model so the
+ * Deterministic demo data. Everything here is SIMULATED, as explained
+ * on the About page. The generator uses a simple optical model so the
  * biofouling analytics behave the way real data would:
  *
  *   • Biofilm attenuates every transmitter as  T = exp(−k · f · h)

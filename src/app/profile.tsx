@@ -3,7 +3,7 @@ import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Disclosure from '../components/Disclosure';
 import StripHealthCard from '../components/StripHealthCard';
-import { Card, DemoBadge, Divider, IconButton, Row, Screen, Section, Segmented, T } from '../components/ui';
+import { Card, Divider, IconButton, Row, Screen, Section, Segmented, T } from '../components/ui';
 import { useStore } from '../state/store';
 import { colors, space } from '../theme/tokens';
 
@@ -36,7 +36,7 @@ export default function Profile() {
           <T v="display">Profile</T>
           <T v="small" style={{ marginTop: 2 }}>Alex · Upper and lower retainers</T>
         </View>
-        <DemoBadge />
+
       </View>
 
       <Section title="Devices">

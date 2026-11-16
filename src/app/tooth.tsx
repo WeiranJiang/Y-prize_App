@@ -7,7 +7,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Circle, G, Line, Path, Text as SvgText } from 'react-native-svg';
 import Sparkline from '../components/charts/Sparkline';
-import { DemoBadge, Divider, IconButton, Meta, Screen, Section, StatusDot, StatusTag, T } from '../components/ui';
+import { Divider, IconButton, Meta, Screen, Section, StatusDot, StatusTag, T } from '../components/ui';
 import { crownFor, SurfaceId } from '../domain/arch';
 import { confidenceOf, siteSeries, SiteResult, surfaceLabel } from '../domain/analysis';
 import { BIOMARKERS, formatValue, Status, STATUS_RANK, unitSuffix } from '../domain/biomarkers';
@@ -135,7 +135,7 @@ export default function Tooth() {
     <Screen>
       <View style={styles.nav}>
         <IconButton name="chevronLeft" label="Back" onPress={() => (router.canGoBack() ? router.back() : router.navigate('/'))} />
-        <DemoBadge />
+
       </View>
 
       <View style={{ paddingHorizontal: space.lg, marginTop: space.lg }}>

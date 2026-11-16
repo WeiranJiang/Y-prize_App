@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import React from 'react';
 import { View } from 'react-native';
-import { Card, DemoBadge, IconButton, Legend, Screen, Section, T } from '../components/ui';
+import { Card, IconButton, Legend, Screen, Section, T } from '../components/ui';
 import { BIOMARKER_ORDER, BIOMARKERS } from '../domain/biomarkers';
 import { colors, space } from '../theme/tokens';
 
@@ -9,7 +9,7 @@ export default function About() {
   return (
     <Screen>
       <View style={{ paddingHorizontal: space.lg }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}><IconButton name="chevronLeft" label="Back" onPress={() => (router.canGoBack() ? router.back() : router.navigate('/'))} /><DemoBadge /></View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}><IconButton name="chevronLeft" label="Back" onPress={() => (router.canGoBack() ? router.back() : router.navigate('/'))} /></View>
         <T v="display" style={{ fontSize: 30, marginTop: space.lg }}>How findings are made</T>
         <T v="body" style={{ marginTop: space.md }}>
           Enamelytics brings the SPOT sensing system’s readings into one place, helping you understand local oral chemistry and how it changes over time. It is a research prototype, not a medical device. All readings in this demo are simulated.

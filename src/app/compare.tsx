@@ -3,7 +3,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { PanResponder, ScrollView, StyleSheet, View } from 'react-native';
 import ArchToggle from '../components/ArchToggle';
 import BiomarkerLegend from '../components/BiomarkerLegend';
-import { Card, DemoBadge, IconButton, Screen, Section, Segmented, StatusDot, T } from '../components/ui';
+import { Card, IconButton, Screen, Section, Segmented, StatusDot, T } from '../components/ui';
 import { readingStatus, scansComparable, siteTitle } from '../domain/analysis';
 import { formatDelta, formatValue, BIOMARKERS } from '../domain/biomarkers';
 import { useStore } from '../state/store';
@@ -58,7 +58,7 @@ export default function Compare() {
     <Screen>
       <View style={styles.header}>
         <IconButton name="chevronLeft" onPress={() => (router.canGoBack() ? router.back() : router.navigate('/trends'))} />
-        <DemoBadge />
+
       </View>
       <View style={{ paddingHorizontal: space.lg, marginTop: space.lg }}>
         <T v="display">Compare scans</T>

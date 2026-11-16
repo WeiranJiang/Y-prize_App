@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import Disclosure from '../components/Disclosure';
-import { Card, DemoBadge, IconButton, KV, Screen, Section, StatusDot, T } from '../components/ui';
+import { Card, IconButton, KV, Screen, Section, StatusDot, T } from '../components/ui';
 import { analyzeScan, confidenceOf, siteTitle } from '../domain/analysis';
 import { BIOMARKERS, formatValue, unitSuffix } from '../domain/biomarkers';
 import { clarityOf, pct } from '../domain/fouling';
@@ -22,7 +22,7 @@ export default function ScanDetails() {
     <Screen>
       <View style={styles.header}>
         <IconButton name="chevronLeft" onPress={() => (router.canGoBack() ? router.back() : router.navigate('/'))} />
-        {scan.demo ? <DemoBadge /> : null}
+
       </View>
       <View style={{ paddingHorizontal: space.lg, marginTop: space.lg }}>
         <T v="label">Scan details</T>

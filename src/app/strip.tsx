@@ -6,7 +6,7 @@ import BottomSheet from '../components/BottomSheet';
 import LineChart from '../components/charts/LineChart';
 import { replaceEta } from '../components/StripHealthCard';
 import ArchToggle from '../components/ArchToggle';
-import { Button, Card, DemoBadge, Divider, IconButton, KV, Legend, Meter, Screen, Section, StatusDot, T } from '../components/ui';
+import { Button, Card, Divider, IconButton, KV, Legend, Meter, Screen, Section, StatusDot, T } from '../components/ui';
 import { siteTitle } from '../domain/analysis';
 import { Status } from '../domain/biomarkers';
 import { computeStripHealth, pct, STATE_COLOR_KEY } from '../domain/fouling';
@@ -49,7 +49,7 @@ export default function StripHealth() {
       <Screen>
         <View style={styles.header}>
           <IconButton name="chevronLeft" onPress={() => (router.canGoBack() ? router.back() : router.navigate('/'))} />
-          <DemoBadge />
+
         </View>
         <View style={{ paddingHorizontal: space.lg, marginTop: space.lg }}>
           <ArchToggle />

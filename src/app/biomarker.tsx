@@ -8,7 +8,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { statLine } from '../components/BiomarkerCard';
 import LineChart, { LPoint } from '../components/charts/LineChart';
 import Sparkline from '../components/charts/Sparkline';
-import { DemoBadge, IconButton, Meta, Screen, Section, Segmented, StatusDot, StatusTag, T } from '../components/ui';
+import { IconButton, Meta, Screen, Section, Segmented, StatusDot, StatusTag, T } from '../components/ui';
 import { siteSeries, siteTitle } from '../domain/analysis';
 import { BIOMARKERS, BiomarkerId, classify, formatValue, STATUS_RANK, unitSuffix } from '../domain/biomarkers';
 import { biomarkerStat } from '../domain/overview';
@@ -80,7 +80,7 @@ export default function BiomarkerDetail() {
     <Screen>
       <View style={styles.nav}>
         <IconButton name="chevronLeft" label="Back" onPress={() => (router.canGoBack() ? router.back() : router.navigate('/'))} />
-        <DemoBadge />
+
       </View>
 
       <View style={{ paddingHorizontal: space.lg, marginTop: space.lg }}>
