@@ -92,4 +92,4 @@ The hosted demo uses simulated readings and the offline Ask guide by default. Th
 
 Manual scan screens, buttons, timers and scan simulations have been removed. The app displays recorded readouts; live case/BLE syncing is not yet wired into this prototype. The existing demo history stays simulated and does not generate new scans in the background.
 
-Overview shows the latest upper and lower readouts, a month calendar and a horizontally scrollable GitHub-style year calendar. Tap a day to see its sessions and open the recorded scan details. Activity colours show sessions per day, not dental health; paired upper/lower records within the same minute count as one session. Calendar days follow the device’s local timezone.
+Overview shows the latest upper and lower readouts, a month calendar and a horizontally scrollable GitHub-style year calendar. Tap a small activity square to see its daily session count. Latest readout details remain available in Last recorded scans. Activity colours show sessions per day, not dental health; paired upper/lower records within the same minute count as one session. Calendar days follow the device’s local timezone.
