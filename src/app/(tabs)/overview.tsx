@@ -82,12 +82,6 @@ export default function Overview() {
             </View>
           </View>
         </View>
-        <View style={styles.dirPill}>
-          <T v="small" style={{ color: colors.text }}>
-            {DIR[o.direction].arrow} {DIR[o.direction].word}
-            {o.delta != null ? <T v="small">{`  ${o.delta > 0 ? '+' : ''}${Math.round(o.delta * 100)} pts`}</T> : null}
-          </T>
-        </View>
         <View style={{ flexDirection: 'row', gap: space.xxl, marginTop: space.xl }}>
           {(['upper', 'lower'] as const).map((a) => (
             <View key={a} style={{ alignItems: 'center' }}>
@@ -99,7 +93,6 @@ export default function Overview() {
         <View style={{ marginTop: space.lg }}>
           <Mini points={o.sessions.map((s) => s.overall)} color={colors.point} w={260} h={44} />
         </View>
-        <T v="small" style={{ fontSize: 11, color: colors.textMuted, marginTop: 4 }}>Share of {o.sites} readings in range · not a diagnosis</T>
       </View>
 
       {/* Biomarkers */}

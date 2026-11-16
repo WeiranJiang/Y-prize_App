@@ -116,7 +116,6 @@ export default function Chat() {
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={{ paddingTop: insets.top + space.md, paddingHorizontal: space.lg, paddingBottom: space.sm, backgroundColor: colors.bg, zIndex: 1, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }}>
         <T v="display">Ask</T>
-        <T v="small" style={{ marginTop: 2 }}>Answers use your own readings. Not a diagnosis.</T>
       </View>
 
       <ScrollView ref={scroll} style={{ flex: 1, overflow: 'hidden' }} contentContainerStyle={{ padding: space.lg, paddingBottom: 24 }} onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}>
