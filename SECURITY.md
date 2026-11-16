@@ -5,11 +5,11 @@ SPOT is a research prototype that runs on simulated data. This file sets out wha
 ## What the app does today
 
 - **No secrets in the app.** The app holds no API keys. Anything prefixed `EXPO_PUBLIC_` is compiled into the app and readable by anyone, so it must never hold a secret.
-- **No health data leaves the device by default.** The Ask assistant runs on-device. Data is only sent if `EXPO_PUBLIC_CHAT_URL` is set, and then only a compact, de-identified summary (no name, email or device IDs).
+- **No health data leaves the device by default.** Ask is a dentist-messaging demo with automated replies, not a connected healthcare service. Conversations are held in memory and reset on reload. Replies run on-device. Data is only sent if `EXPO_PUBLIC_CHAT_URL` is set, and then only a compact, de-identified summary (no name, email or device IDs).
 - **Network policy.** The chat endpoint must use HTTPS. Plain HTTP is accepted only in development builds, and only to `localhost` or a private LAN address (10.x, 172.16–31.x, 192.168.x). Requests time out after 20 s and replies are validated and length-capped. On any failure the app falls back to the on-device assistant.
 - **Untrusted input.**
   - Deep-link parameters are validated before use: a tooth must be 1–32, a biomarker must be one of the six known IDs, and an unknown scan ID falls back to the latest scan.
-  - Text inputs are length-limited (chat 500 characters, search 60).
+  - Text inputs are length-limited (chat 1,000 characters, search 60).
 - **No persistence.** The demo keeps everything in memory, with no local database or files.
 
 ## Chat server (`server/`)

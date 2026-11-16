@@ -24,7 +24,7 @@ export default function About() {
           <T v="bodyStrong" style={{ marginTop: space.lg }}>2. The case reads the strip</T>
           <T v="small" style={{ marginTop: 4 }}>The system is designed for automatic readouts in the scanning case, with no scan button in the app. This demo uses sample history; live hardware syncing is not connected yet.</T>
           <T v="bodyStrong" style={{ marginTop: space.lg }}>3. The app puts the results in context</T>
-          <T v="small" style={{ marginTop: 4 }}>Findings use predefined rules to compare readings with configurable research ranges, check signal quality and highlight repeated patterns. The Ask guide can explain readings and general oral care; its answers are separate from those measurement rules.</T>
+          <T v="small" style={{ marginTop: 4 }}>Findings use predefined rules to compare readings with configurable research ranges, check signal quality and highlight repeated patterns. Ask previews messaging with your dental care team. Replies are automated for this demo; no dentist or practice is connected.</T>
         </Card>
       </Section>
 

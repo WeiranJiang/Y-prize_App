@@ -22,14 +22,14 @@ npm run typecheck
 | **Home** | Upper/Lower toggle, biomarker filter, the interactive point-cloud retainer, one status line, dental-arch map, tooth search, insights and recommendations. Tapping a tooth (3D, arch map or search) opens the **magnifier**: a circular zoomed 3D view of that tooth with its readings. |
 | **Trends** | Pick a biomarker and tap a tooth to see its current readings and history; all-sites small multiples, neighbouring-site comparison, persistent findings, measurement reliability, before/after 3D compare |
 | **Overview** | Whole-mouth summary: share of readings in range, direction of travel, upper vs lower, a tile per biomarker, last recorded scans and month/year scan activity calendars |
-| **Ask** | Chat assistant grounded in the user's own readings (on-device by default; optional Claude backend, see below) |
+| **Ask** | Dentist-messaging preview with draft prompts and automated demo replies; no connected practice |
 | **Strips** | Strips in use, spares at home, automatic (subscription) or manual reordering, order history (demo, no payments) |
 
 Other routes: `/profile` (icon on Home), `/strip` (strip health), `/compare`, `/scan-details`, `/about`.
 
 ## Ask: optional Claude backend
 
-The Ask tab answers on-device from the app's own rules and data. To use Claude instead, run the small server in `server/` and point the app at it. The API key stays on the server, never in the app:
+The Ask tab previews a conversation with a dental care team. No clinician receives messages and no appointments or prescriptions can be requested. Conversations reset on reload. Demo replies run on-device from the app's own rules and data. To use Claude instead, run the small server in `server/` and point the app at it. The API key stays on the server, never in the app:
 
 ```bash
 cd server && npm install && ANTHROPIC_API_KEY=... npm start
@@ -74,7 +74,7 @@ Add or enable an entry in `src/domain/biomarkers.ts` (units, bands, limitation t
 
 ### Ask security and deployment
 
-The assistant answers general questions and uses supplied demo readings for personal insights. Offline answers are a limited rule-based guide. Questions are limited to 2,000 characters; server requests to 32 KiB and 10 history turns. Live requests time out, and failures clearly switch to the offline guide.
+The assistant answers general questions and uses supplied demo readings for personal insights. Offline answers are a limited rule-based guide. The composer allows 1,000 characters (the server accepts up to 2,000); server requests to 32 KiB and 10 history turns. Live requests time out, and failures clearly switch to the offline guide.
 
 The backend allows 10 requests/minute and 100/day per socket IP, 1,000/day globally, and 5 concurrent requests. Rejected requests return HTTP 429 and `Retry-After`. Limits are in memory and reset on restart. Multiple replicas require a shared gateway/Redis limiter. Behind a reverse proxy all users share the proxy IP unless the gateway enforces trusted per-user limits; arbitrary forwarded headers are intentionally ignored. The client also limits rapid submissions, but the server is the enforcement boundary.
 
@@ -86,7 +86,7 @@ Server checks: `cd server && npm run typecheck && npx tsx --test security.test.t
 
 Import [this repository into Vercel](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FWeiranJiang%2FY-prize_App). Choose the repository root, then deploy. `vercel.json` sets the Expo web export command, `dist` output, SPA route fallback, and security headers. Vercel supplies a shareable HTTPS URL after deployment. For a project already connected to this repository, the next deployment picks up these settings automatically.
 
-The hosted demo uses simulated readings and the offline Ask guide by default. The optional Node chat server is a separate service; this static deployment does not run `server/index.ts`. To enable live Ask, deploy that service separately, set `EXPO_PUBLIC_CHAT_URL` to its HTTPS `/chat` endpoint in Vercel before building, and allow your Vercel site's exact origin in the backend's `CHAT_ALLOWED_ORIGINS`.
+The hosted demo uses simulated readings and the offline Ask guide by default. The optional Node chat server is a separate service; this static deployment does not run `server/index.ts`. To enable model-generated demo replies, deploy that service separately, set `EXPO_PUBLIC_CHAT_URL` to its HTTPS `/chat` endpoint in Vercel before building, and allow your Vercel site's exact origin in the backend's `CHAT_ALLOWED_ORIGINS`.
 
 ## Automatic scan history
 

@@ -2,11 +2,13 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, ScrollViewInstance, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from '../../components/Icon';
-import { Meta, T } from '../../components/ui';
+import BottomSheet from '../../components/BottomSheet';
+import { Button, IconButton, T } from '../../components/ui';
 import { siteSeries } from '../../domain/analysis';
-import { ask, AssistantContext, Reply, SiteTrend, Topic } from '../../domain/assistant';
+import { ask, AssistantContext, Reply, SiteTrend } from '../../domain/assistant';
 import { buildInsights } from '../../domain/insights';
 import { buildOverview } from '../../domain/overview';
+import { CARE_DEMO_NOTICE, CARE_STARTERS, careDemoReply } from '../../domain/careMessaging';
 import { RateLimiter } from '../../domain/rateLimit';
 import type { Arch } from '../../domain/teeth';
 import { useStore } from '../../state/store';
@@ -14,17 +16,13 @@ import { colors, font, radius, space } from '../../theme/tokens';
 
 interface Msg {
   id: number;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   text: string;
-  suggestions?: string[];
-  topic?: Topic;
 }
 
 const START: Msg = {
-  id: 0,
-  role: 'assistant',
-  text: 'Hi! Ask me about your readings, what a number means, or everyday things like flossing, drinks and retainer care. These are simulated demo readings.',
-  suggestions: ['How are my teeth overall?', 'Which teeth need attention?', 'What should I do this week?', 'Is coffee bad for my teeth?'],
+  id: 0, role: 'assistant',
+  text: 'What would you like to discuss with your dental team? You can ask about your readings, retainer care, or preparing for a visit.',
 };
 
 export default function Chat() {
@@ -36,17 +34,19 @@ export default function Chat() {
   const [busy, setBusy] = useState(false);
   const [waitUntil, setWaitUntil] = useState(0);
   const [now, setNow] = useState(Date.now());
+  const [info, setInfo] = useState(false);
   const limiter = useRef(new RateLimiter()).current;
   const sending = useRef(false);
+  const ids = useRef(1);
   const scroll = useRef<ScrollViewInstance>(null);
+  const input = useRef<React.ComponentRef<typeof TextInput>>(null);
 
-  // Countdown while rate-limited.
   useEffect(() => {
     if (waitUntil <= Date.now()) return;
     const id = setInterval(() => {
       setNow(Date.now());
       if (Date.now() >= waitUntil) clearInterval(id);
-    }, 250);
+    }, 500);
     return () => clearInterval(id);
   }, [waitUntil]);
   const waiting = waitUntil > now;
@@ -81,103 +81,102 @@ export default function Chat() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.scans, state.strips, state.settings, state.supply, state.plan, state.rev]);
 
-  const send = async (q: string) => {
-    const question = q.trim().slice(0, 500);
-    if (!question || sending.current) return;
+  const send = async () => {
+    const question = text.trim().slice(0, 1000);
+    if (!question || sending.current || waiting) return;
     const gate = limiter.take();
     if (!gate.ok) {
-      const secs = Math.ceil(gate.retryInMs / 1000);
       setWaitUntil(Date.now() + gate.retryInMs);
       setNow(Date.now());
-      setMsgs((m) => [
-        ...m,
-        { id: Date.now(), role: 'assistant', text: secs <= 2 ? 'One sec, still thinking about your last question.' : `You’re asking faster than I can keep up (limit: ${gate.label}). Give me about ${secs < 60 ? `${secs} seconds` : `${Math.ceil(secs / 60)} minutes`} and ask again.` },
-      ]);
       return;
     }
     sending.current = true;
+    const history = msgs.flatMap(message => message.role === 'system' ? [] : [{ role: message.role, text: message.text }]);
+    setMsgs(messages => [...messages, { id: ids.current++, role: 'user', text: question }]);
     setText('');
-    setMsgs((m) => [...m, { id: Date.now(), role: 'user', text: question }]);
     setBusy(true);
-    const history = msgs.map((m) => ({ role: m.role, text: m.text }));
-    const topic = [...msgs].reverse().find((m) => m.topic)?.topic;
-    const started = Date.now();
     try {
-    const reply: Reply = await ask(question, history, ctx, topic);
-    // A short, natural pause so on-device answers don't feel robotic.
-    const pause = Math.max(0, Math.min(900, 350 + reply.text.length * 1.2) - (Date.now() - started));
-    await new Promise((r) => setTimeout(r, pause));
-    setMsgs((m) => [...m, { id: Date.now() + 1, role: 'assistant', text: reply.text, suggestions: reply.suggestions, topic: reply.topic ?? topic }]);
+      const reply: Reply = careDemoReply(question) ?? await ask(question, history, ctx);
+      setMsgs(messages => [...messages, { id: ids.current++, role: 'assistant', text: reply.text }]);
     } catch {
-      setMsgs(m => [...m, { id: Date.now() + 1, role: 'assistant', text: 'I couldn’t finish that answer. Please try again.' }]);
+      setMsgs(messages => [...messages, { id: ids.current++, role: 'system', text: 'The demo reply couldn’t load. No message was sent to a clinic. Please try again.' }]);
+      setText(question);
     } finally {
       sending.current = false;
       setBusy(false);
     }
-    setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 50);
   };
-
-  const last = msgs[msgs.length - 1];
   const disabled = !text.trim() || busy || waiting;
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={{ paddingTop: insets.top + space.md, paddingHorizontal: space.lg, paddingBottom: space.sm, backgroundColor: colors.bg, zIndex: 1, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }}>
-        <T v="display">Ask</T>
-      </View>
+    <>
+      <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={{ flex: 1, width: '100%', maxWidth: 760, alignSelf: 'center' }}>
+          <View style={{ paddingTop: insets.top + space.md, paddingHorizontal: space.lg }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm }}>
+              <T v="display" style={{ flex: 1, fontSize: 28 }}>Ask your dentist</T>
+              <IconButton name="info" label="About dentist messaging demo" onPress={() => setInfo(true)} />
+            </View>
+            <View style={styles.recipient}>
+              <View style={styles.avatar}><Icon name="profile" size={22} color={colors.text} /></View>
+              <View style={{ flex: 1 }}><T v="bodyStrong">Your dental care team</T><T v="small">Demo practice</T></View>
+              <View style={styles.demoTag}><T v="small" style={{ color: colors.text }}>Preview</T></View>
+            </View>
+            <T v="small" style={styles.notice}>{CARE_DEMO_NOTICE}</T>
+          </View>
 
-      <ScrollView ref={scroll} style={{ flex: 1, overflow: 'hidden' }} contentContainerStyle={{ padding: space.lg, paddingBottom: 24 }} onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}>
-        {msgs.map((m) => (
-          <View key={m.id} style={[styles.bubble, m.role === 'user' ? styles.user : styles.bot]}>
-            <T v="body" style={{ color: m.role === 'user' ? colors.textOnLight : colors.text, fontSize: 15, lineHeight: 22 }}>{m.text}</T>
-          </View>
-        ))}
-        {busy ? (
-          <View style={[styles.bubble, styles.bot, { paddingVertical: 12 }]}>
-            <T v="small">Thinking…</T>
-          </View>
-        ) : null}
-        {!busy && last.role === 'assistant' && last.suggestions?.length ? (
-          <View style={styles.suggest}>
-            {last.suggestions.slice(0, 3).map((s) => (
-              <Pressable key={s} onPress={() => send(s)} disabled={waiting} style={({ pressed }) => [styles.chip, (pressed || waiting) && { opacity: 0.6 }]}>
-                <T v="small" style={{ color: colors.text }}>{s}</T>
-              </Pressable>
+          <ScrollView ref={scroll} style={{ flex: 1 }} contentContainerStyle={{ padding: space.lg, paddingBottom: space.sm }} keyboardShouldPersistTaps="handled" onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}>
+            {msgs.map(message => message.role === 'system' ? <T key={message.id} v="small" accessibilityLiveRegion="polite" style={{ marginVertical: space.md }}>{message.text}</T> : (
+              <View key={message.id} style={[styles.message, message.role === 'user' ? { alignSelf: 'flex-end' } : { alignSelf: 'flex-start' }]}>
+                <T v="small" style={{ marginBottom: 5 }}>{message.role === 'user' ? 'You · demo message' : 'Dental team · automated demo reply'}</T>
+                <View style={[styles.bubble, message.role === 'user' ? styles.patient : styles.team]}>
+                  <T v="body" style={{ color: message.role === 'user' ? colors.textOnLight : colors.text }}>{message.text}</T>
+                </View>
+              </View>
             ))}
-          </View>
-        ) : null}
-      </ScrollView>
+            {busy ? <T v="small" accessibilityLiveRegion="polite" style={{ paddingVertical: space.sm }}>Generating demo reply…</T> : null}
+            {msgs.length === 1 ? <View style={styles.starters}>
+              {CARE_STARTERS.map(starter => <Pressable key={starter.label} accessibilityRole="button" accessibilityLabel={`Draft message: ${starter.label}`} onPress={() => { setText(starter.text); input.current?.focus(); }} style={styles.chip}><T v="small" style={{ color: colors.text }}>{starter.label}</T></Pressable>)}
+            </View> : null}
+          </ScrollView>
 
-      <View style={{ marginBottom: 76 + insets.bottom }}>
-        {waiting ? <Meta style={{ textAlign: 'center', marginBottom: 6 }}>You can ask again in {Math.ceil((waitUntil - now) / 1000)}s</Meta> : null}
-        <View style={styles.inputBar}>
-          <TextInput
-            value={text}
-            onChangeText={setText}
-            maxLength={500}
-            placeholder={waiting ? 'Taking a short breather…' : 'Ask anything about your teeth…'}
-            placeholderTextColor={colors.textMuted}
-            style={styles.input}
-            onSubmitEditing={() => !disabled && send(text)}
-            returnKeyType="send"
-            editable={!waiting}
-          />
-          <Pressable onPress={() => send(text)} style={[styles.send, disabled && { opacity: 0.35 }]} disabled={disabled} accessibilityLabel="Send">
-            <Icon name="send" size={18} color={colors.textOnLight} />
-          </Pressable>
+          <View style={{ paddingHorizontal: space.lg, paddingTop: space.sm, marginBottom: 76 + insets.bottom }}>
+            {waiting ? <T v="small" accessibilityLiveRegion="polite" style={{ marginBottom: space.sm }}>Demo message limit. Try again in {Math.max(1, Math.ceil((waitUntil - now) / 1000))}s.</T> : null}
+            <View style={styles.composer}>
+              <TextInput
+                ref={input} value={text} onChangeText={setText} maxLength={1000} multiline
+                placeholder="Message your dental team…" placeholderTextColor={colors.textMuted}
+                accessibilityLabel="Message your dental team" style={styles.input}
+                editable={!busy && !waiting} textAlignVertical="top"
+              />
+              <Pressable accessibilityRole="button" accessibilityLabel="Send demo message" accessibilityState={{ disabled }} disabled={disabled} onPress={send} style={[styles.send, disabled && { opacity: 0.35 }]}><Icon name="send" size={18} color={colors.textOnLight} /></Pressable>
+            </View>
+          </View>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+      <BottomSheet open={info} onClose={() => setInfo(false)}>
+        <T v="title">Dentist messaging preview</T>
+        <T v="body" style={{ marginTop: space.md }}>This screen demonstrates how messaging your healthcare provider could work. No practice is connected, and no clinician receives, reads or responds to these messages.</T>
+        <T v="body" style={{ marginTop: space.md }}>Replies are generated automatically using demo readings. This conversation resets when the app is reloaded. Contact your actual dental practice for care or appointments.</T>
+        <T v="body" style={{ marginTop: space.md }}>For urgent symptoms, contact a dentist or emergency service directly.</T>
+        <Button label="Got it" style={{ marginTop: space.lg }} onPress={() => setInfo(false)} />
+      </BottomSheet>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  bubble: { maxWidth: '88%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 16, marginBottom: 10 },
-  user: { alignSelf: 'flex-end', backgroundColor: colors.ivory, borderBottomRightRadius: 6 },
-  bot: { alignSelf: 'flex-start', backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, borderBottomLeftRadius: 6 },
-  suggest: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
-  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: colors.bg2, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
-  inputBar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: space.lg, paddingLeft: 14, paddingRight: 5, height: 48, borderRadius: radius.sm, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, backgroundColor: colors.surface },
-  input: { flex: 1, color: colors.text, fontFamily: font.family, fontWeight: '400', fontSize: 15, outlineStyle: 'none' } as object,
-  send: { width: 38, height: 38, borderRadius: 10, backgroundColor: colors.ivory, alignItems: 'center', justifyContent: 'center' },
+  recipient: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.md, paddingVertical: space.md },
+  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
+  demoTag: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, backgroundColor: colors.surface },
+  notice: { color: colors.textSecondary, backgroundColor: colors.bg2, borderRadius: 8, padding: space.md, marginBottom: space.sm },
+  message: { maxWidth: '92%', marginBottom: space.md },
+  bubble: { paddingHorizontal: 14, paddingVertical: 12, borderRadius: 16 },
+  patient: { backgroundColor: colors.ivory, borderBottomRightRadius: 5 },
+  team: { backgroundColor: colors.surface, borderBottomLeftRadius: 5 },
+  starters: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginBottom: space.sm },
+  chip: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 8, backgroundColor: colors.bg2, borderWidth: 1, borderColor: colors.border },
+  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, padding: space.sm, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  input: { flex: 1, minHeight: 40, maxHeight: 120, paddingHorizontal: 6, paddingTop: 10, paddingBottom: 10, color: colors.text, fontFamily: font.family, fontSize: 15, lineHeight: 21, outlineStyle: 'none' } as object,
+  send: { width: 44, height: 44, borderRadius: 10, backgroundColor: colors.ivory, alignItems: 'center', justifyContent: 'center' },
 });
