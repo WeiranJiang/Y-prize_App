@@ -26,11 +26,9 @@ export interface Order {
   status: 'processing' | 'shipped' | 'delivered';
   eta: string;
 }
-export type ViewLevel = 'consumer' | 'research';
 
 export interface Settings {
   numbering: NumberingSystem;
-  view: ViewLevel;
   /** Which arch every screen is showing. */
   arch: Arch;
   limits: StripLimits;
@@ -54,6 +52,7 @@ interface State {
 
 type Action =
   | { type: 'addScans'; scans: Scan[] }
+  | { type: 'setSupply'; arch: Arch; value: number }
   | { type: 'replaceStrip'; at: Date }
   | { type: 'settings'; patch: Partial<Settings> }
   | { type: 'case'; status: CaseStatus }
@@ -70,7 +69,6 @@ function initial(): State {
     currentStripIds: { upper: current('upper'), lower: current('lower') },
     settings: {
       numbering: 'universal',
-      view: 'consumer',
       arch: 'upper',
       limits: { ...DEFAULT_LIMITS },
       pHBands: { ...BIOMARKERS.pH.bands },
@@ -97,6 +95,9 @@ function reducer(s: State, a: Action): State {
   switch (a.type) {
     case 'addScans':
       return { ...s, scans: [...new Map([...s.scans, ...a.scans].map(scan => [scan.id, scan])).values()] };
+    case 'setSupply':
+      if (!Number.isFinite(a.value)) return s;
+      return { ...s, supply: { ...s.supply, [a.arch]: Math.max(0, Math.min(99, Math.trunc(a.value))) } };
     case 'replaceStrip': {
       const arch = s.settings.arch;
       const n = s.strips.length + 1;

@@ -60,8 +60,6 @@ export default function Profile() {
       <Section title="Display">
         <T v="small" style={{ marginBottom: 8 }}>Tooth numbering</T>
         <Segmented style={{ paddingHorizontal: 0 }} options={[{ key: 'universal', label: 'Universal (1–32)' }, { key: 'fdi', label: 'FDI (11–48)' }]} value={s.numbering} onChange={(k) => dispatch({ type: 'settings', patch: { numbering: k } })} />
-        <T v="small" style={{ marginVertical: 8, marginTop: space.lg }}>Detail level</T>
-        <Segmented style={{ paddingHorizontal: 0 }} options={[{ key: 'consumer', label: 'Everyday' }, { key: 'research', label: 'Research' }]} value={s.view} onChange={(k) => dispatch({ type: 'settings', patch: { view: k } })} />
       </Section>
 
       <Section>

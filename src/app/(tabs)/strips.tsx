@@ -13,12 +13,12 @@ import { colors, space } from '../../theme/tokens';
 const PRICE = 9; // demo price per strip (USD)
 const fmtDate = (d: Date | string) => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
-function Stepper({ value, onChange, min = 0, max = 6 }: { value: number; onChange: (v: number) => void; min?: number; max?: number }) {
+function Stepper({ value, onChange, min = 0, max = 6, label = 'quantity' }: { value: number; onChange: (v: number) => void; min?: number; max?: number; label?: string }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-      <Pressable onPress={() => onChange(Math.max(min, value - 1))} hitSlop={8} style={styles.step}><T v="bodyStrong">−</T></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Decrease ${label}`} disabled={value <= min} onPress={() => onChange(Math.max(min, value - 1))} style={[styles.step, value <= min && { opacity: 0.35 }]}><T v="bodyStrong">−</T></Pressable>
       <T v="bodyStrong" style={{ minWidth: 18, textAlign: 'center', fontVariant: ['tabular-nums'] }}>{value}</T>
-      <Pressable onPress={() => onChange(Math.min(max, value + 1))} hitSlop={8} style={styles.step}><T v="bodyStrong">+</T></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Increase ${label}`} disabled={value >= max} onPress={() => onChange(Math.min(max, value + 1))} style={[styles.step, value >= max && { opacity: 0.35 }]}><T v="bodyStrong">+</T></Pressable>
     </View>
   );
 }
@@ -81,12 +81,14 @@ export default function Strips() {
 
         {/* Supply */}
         <Section title="At home">
-          <Card style={{ flexDirection: 'row' }}>
-            {(['upper', 'lower'] as Arch[]).map((a) => (
-              <View key={a} style={{ flex: 1, alignItems: 'center' }}>
-                <T v="number">{supply[a]}</T>
-                <T v="small" style={{ fontSize: 12 }}>spare {a}</T>
-              </View>
+          <Card>
+            {(['upper', 'lower'] as Arch[]).map((arch, index) => (
+              <React.Fragment key={arch}>
+                {index ? <Divider /> : null}
+                <Row label={`Spare ${arch} strips`}>
+                  <Stepper value={supply[arch]} max={99} label={`spare ${arch} strips`} onChange={value => dispatch({ type: 'setSupply', arch, value })} />
+                </Row>
+              </React.Fragment>
             ))}
           </Card>
           {low.length && plan.mode === 'manual' ? (
@@ -179,7 +181,7 @@ export default function Strips() {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 }}>
-      <T v="small" style={{ color: colors.text }}>{label}</T>
+      <T v="small" style={{ color: colors.text, flex: 1, marginRight: space.sm }}>{label}</T>
       {children}
     </View>
   );
