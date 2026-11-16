@@ -1,5 +1,5 @@
 /**
- * SPOT component kit. Flat graphite surfaces, hairline borders, no shadows,
+ * OraCare component kit. Flat graphite surfaces, hairline borders, no shadows,
  * 12–18px radii, 8-pt spacing, typography-led hierarchy.
  */
 import React from 'react';

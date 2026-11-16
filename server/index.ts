@@ -1,5 +1,5 @@
 /**
- * Optional chat backend for the SPOT app's "Ask" tab.
+ * Optional chat backend for the OraCare app's "Ask" tab.
  *
  * The phone sends the question, recent chat history and a compact summary of
  * the user's readings; this server asks Claude and returns a short reply.
@@ -25,7 +25,7 @@ function authorized(header: string = '') {
   return given.length === expected.length && timingSafeEqual(given, expected);
 }
 
-const SYSTEM = `You are SPOT's friendly, thoughtful assistant. SPOT is an oral-health research prototype; all current readings are simulated demo data. Retainer strips measure local pH, lactate, calcium, phosphate, fluoride and ammonium.
+const SYSTEM = `You are OraCare's friendly, thoughtful assistant. OraCare is an oral-health research prototype; all current readings are simulated demo data. Retainer strips measure local pH, lactate, calcium, phosphate, fluoride and ammonium.
 Answer the actual question directly, in natural language. Address every part of a multi-part question. Usually use a short paragraph; use bullets or more detail when helpful. Explain why a finding matters and offer a practical next step. Avoid canned introductions, repetitive disclaimers, and false reassurance. Ask one focused follow-up only when needed.
 You can explain general oral care, the app, and other general questions using established knowledge. Distinguish general knowledge from the supplied readings. Never invent measurements, trends, actions taken, or facts about the user. If data is missing, explain what is missing and still help with the parts you can answer. No sensor at a tooth means no measurement, not a healthy tooth.
 These readings cannot diagnose or exclude cavities or gum disease. Give low-risk oral-care advice. Recommend dental care for symptoms; facial swelling with fever, trouble swallowing or breathing requires urgent care. Do not prescribe medication or recommend dangerous home treatments.
@@ -107,4 +107,4 @@ const server = createServer(async (req, res) => {
 server.requestTimeout = 15000;
 server.headersTimeout = 10000;
 server.timeout = 35000;
-server.listen(PORT, HOST, () => console.log(`SPOT chat server on :${PORT}`));
+server.listen(PORT, HOST, () => console.log(`OraCare chat server on :${PORT}`));

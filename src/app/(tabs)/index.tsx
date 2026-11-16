@@ -68,7 +68,7 @@ export default function Home() {
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
 
-            <T v="display" style={{ marginTop: 4 }}>Oral health</T>
+            <T v="display" style={{ marginTop: 4 }}>OraCare</T>
           </View>
           <View style={{ flexDirection: 'row', gap: space.sm }}>
             <IconButton name="search" label="Search teeth" onPress={() => setSearching((v) => !v)} />

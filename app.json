@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "SPOT",
-    "slug": "spot-oral",
+    "name": "OraCare",
+    "slug": "oracare",
     "version": "0.1.0",
-    "scheme": "spot",
+    "scheme": "oracare",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -24,7 +24,10 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "output": "single"
+      "output": "single",
+      "name": "OraCare",
+      "shortName": "OraCare",
+      "description": "Oral-health readings, food logging and scan history in one place."
     },
     "plugins": [
       "expo-router",
@@ -39,6 +42,7 @@
     ],
     "experiments": {
       "typedRoutes": false
-    }
+    },
+    "description": "Oral-health readings, food logging and scan history in one place."
   }
 }

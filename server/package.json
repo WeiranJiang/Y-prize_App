@@ -1,5 +1,5 @@
 {
-  "name": "spot-chat-server",
+  "name": "oracare-chat-server",
   "private": true,
   "type": "module",
   "scripts": {

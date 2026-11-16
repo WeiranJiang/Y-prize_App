@@ -1,5 +1,5 @@
 /**
- * SPOT assistant. A friendly, plain-spoken guide that answers questions about
+ * OraCare assistant. A friendly, plain-spoken guide that answers questions about
  * the user's own readings, and general oral-health questions, tying answers
  * back to their data where it helps. It never diagnoses, and it points to a
  * dentist for symptoms.
@@ -380,14 +380,14 @@ export function answerLocally(question: string, ctx: AssistantContext, topic?: T
     return { text: 'Hi! I can walk you through your latest readings, explain what a number means, or help with everyday questions like flossing, drinks or retainer care. What’s on your mind?', suggestions: ['How are my teeth overall?', 'What should I do this week?', 'What about coffee?'] };
   if (has(q, /^(thanks|thank you|thx|cheers|great|ok|okay|cool|got it)\b/)) return { text: pick(q, ['Anytime. Shout if anything else comes up.', 'Happy to help. Good luck with it this week.', 'You’re welcome!']) };
   if (has(q, /who are you|what can you do|help\b/))
-    return { text: 'I’m your SPOT assistant. I read your latest scans and can explain them in plain language, show what’s changed, and suggest practical things to try. I can also answer general oral-health questions. I can’t diagnose anything; that’s your dentist’s job.', suggestions: ['How are my teeth overall?', 'Which teeth need attention?'] };
+    return { text: 'I’m your OraCare assistant. I read your latest scans and can explain them in plain language, show what’s changed, and suggest practical things to try. I can also answer general oral-health questions. I can’t diagnose anything; that’s your dentist’s job.', suggestions: ['How are my teeth overall?', 'Which teeth need attention?'] };
 
   if (has(q, /\bdentist\b/) && has(q, /tell|ask|mention|bring|prepare|visit/)) {
     const c = concerns(ctx).slice(0, 4);
     return {
       text: c.length
         ? `Good idea to go prepared. Things worth mentioning:\n${c.map((r) => `• ${where(r, n)}: ${BIOMARKERS[r.site.biomarker].shortName} ${value(r)} (${word(r)})${trendOf(ctx, r.site.id) ? `, ${trendSentence(r, ctx)!.replace(/^[^ ]+ there has /, '')}` : ''}`).join('\n')}\n\nYou could ask whether they’d like to check those areas more closely, and whether a higher-fluoride toothpaste would help.`
-        : 'Nothing stands out right now, so just mention you’re monitoring with SPOT and everything has been in range.',
+        : 'Nothing stands out right now, so just mention you’re monitoring with OraCare and everything has been in range.',
     };
   }
 

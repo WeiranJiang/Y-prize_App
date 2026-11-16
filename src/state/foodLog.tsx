@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { FoodEntry, validFoodEntry } from '../domain/food';
 
+// Keep this legacy storage key so rebranding doesn't erase existing food logs.
 const KEY = 'enamelytics.food-log.v1';
 const LIMIT = 1000;
 interface FoodLog {

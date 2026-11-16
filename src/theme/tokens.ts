@@ -1,5 +1,5 @@
 /**
- * SPOT design system — neutral, clinical dark UI.
+ * OraCare design system — neutral, clinical dark UI.
  *
  * ~90% of every screen is black, graphite, white and gray. Green, amber and
  * red are reserved for medical status and always ship with a text label.

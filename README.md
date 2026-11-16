@@ -1,10 +1,10 @@
-# SPOT — localized oral health monitoring (prototype)
+# OraCare — localized oral health monitoring (prototype)
 
-Mobile app for the SPOT (Submillimeter Polymer Optical Transmitter) system: a sensing strip in a clear retainer, an optical scanning case, and this app. Built with Expo (SDK 58) + Expo Router + expo-gl/three.js. **All data is simulated demo data.**
+OraCare is the app for the SPOT (Submillimeter Polymer Optical Transmitter) system: a sensing strip in a clear retainer, an optical scanning case, and this app. Built with Expo (SDK 58) + Expo Router + expo-gl/three.js. **All data is simulated demo data.**
 
 ## Web demo
 
-[Open the Enamelytics demo](https://enamelytics.vercel.app/)
+[Open the OraCare demo](https://enamelytics.vercel.app/)
 
 ## Run
 
