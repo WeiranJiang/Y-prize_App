@@ -137,7 +137,7 @@ export default function Chat() {
           <ScrollView ref={scroll} style={{ flex: 1 }} contentContainerStyle={{ padding: space.lg, paddingBottom: space.sm }} keyboardShouldPersistTaps="handled" onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}>
             {(mode === 'dentist' ? drafts : msgs).map(message => message.role === 'system' ? <T key={message.id} v="small" accessibilityLiveRegion="polite" style={{ marginVertical: space.md }}>{message.text}</T> : (
               <View key={message.id} style={[styles.message, message.role === 'user' ? { alignSelf: 'flex-end' } : { alignSelf: 'flex-start' }]}>
-                <T v="small" style={{ marginBottom: 5 }}>{message.role === 'user' ? (mode === 'dentist' ? 'You · draft, not sent' : 'You') : 'OraCare chatbot'}</T>
+                <T v="small" style={{ marginBottom: 5 }}>{message.role === 'user' ? (mode === 'dentist' ? 'Not sent' : 'You') : 'OraCare chatbot'}</T>
                 <View style={[styles.bubble, message.role === 'user' ? styles.patient : styles.team]}>
                   <T v="body" style={{ color: message.role === 'user' ? colors.textOnLight : colors.text }}>{message.text}</T>
                 </View>
