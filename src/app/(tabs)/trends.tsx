@@ -120,7 +120,7 @@ export default function Findings() {
 
       <T v="small" style={{ paddingHorizontal: space.lg, marginTop: space.sm }}>Review flagged readings, then tap a tooth to see its history.</T>
       <View style={{ marginHorizontal: space.lg, marginTop: space.md }}>
-      <Disclosure title="Measurements" summary={bios.map(id => BIOMARKERS[id].shortName).join(' · ')}>
+      <T v="bodyStrong" style={{ fontSize: 15 }}>Measurements</T>
       {/* Biomarker multi-select */}
       <View style={styles.chips}>
         {BIOMARKER_ORDER.map((id) => {
@@ -135,7 +135,6 @@ export default function Findings() {
       </View>
 
       <Meta style={{ marginTop: space.sm }}>Choose one or more measurements. At least one stays selected.</Meta>
-      </Disclosure>
       </View>
       {/* Time range */}
       <View style={styles.rangeBox}>
