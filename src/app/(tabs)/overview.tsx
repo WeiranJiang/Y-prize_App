@@ -96,7 +96,7 @@ export default function Overview() {
 
       <ScanHistory />
 
-      {watch.length ? <Section title="Worth a closer look"><T v="body">{watch.map(b => BIOMARKERS[b.id].shortName).join(', ')} {watch.length === 1 ? 'has' : 'have'} flagged readings or a worsening trend. Open a measurement below to see where.</T></Section> : null}
+      {watch.length ? <Section title="Worth a closer look"><T v="body">{watch.map(b => BIOMARKERS[b.id].shortName).join(', ')} {watch.length === 1 ? 'has' : 'have'} flagged readings or a worsening trend.</T></Section> : null}
       {/* Biomarkers */}
       <Section title="Measurements">
         <T v="small" style={{ marginBottom: space.md }}>Each percentage shows readings in range. Tap for details and locations.</T>
