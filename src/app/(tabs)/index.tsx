@@ -11,6 +11,8 @@ import { BIOMARKERS, BIOMARKER_COLORS, BIOMARKER_ORDER, BiomarkerId } from '../.
 import { parseTooth, RETAINER_TEETH, searchTeeth, toothByUniversal } from '../../domain/teeth';
 import { useStore } from '../../state/store';
 import RetainerView, { Selection } from '../../three/RetainerView';
+import { attentionSites } from '../../domain/attention';
+import { siteTeeth } from '../../domain/sensorLayout';
 import { regionsForScan } from '../../three/regions';
 import { colors, font, radius, space } from '../../theme/tokens';
 
@@ -39,6 +41,9 @@ export default function Home() {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const regions = useMemo(() => regionsForScan(latestScan, strip, sensorType), [latestScan, strip, sensorType, state.rev]);
+
+  const flaggedSites = attentionSites(latestScan, strip, sensorType);
+  const attentionMarks = new Map(flaggedSites.flatMap(site => siteTeeth(site).map(tooth => [tooth, { color: colors.high }] as const)));
 
   const openTooth = (u: number) => {
     const a = toothByUniversal(u).arch;
@@ -107,11 +112,12 @@ export default function Home() {
               </View>
             ) : (
               <View style={{ paddingHorizontal: 6, paddingTop: space.sm, paddingBottom: space.md }}>
-                <ArchDiagram key={arch} arch={arch} sites={strip?.sites.filter(site => sensorType === 'overview' || site.biomarker === sensorType)} references={strip?.sensorReferences.filter(site => sensorType === 'overview' || site.biomarker === sensorType)} selected={loupe} onSelect={openTooth} numbering={numbering} />
+                <ArchDiagram marks={attentionMarks} key={arch} arch={arch} sites={strip?.sites.filter(site => sensorType === 'overview' || site.biomarker === sensorType)} references={strip?.sensorReferences.filter(site => sensorType === 'overview' || site.biomarker === sensorType)} selected={loupe} onSelect={openTooth} numbering={numbering} />
               </View>
             )}
             <View style={{ paddingBottom: space.md }}>
               <BiomarkerLegend only={[]} />
+              <T v="small" style={{ textAlign: 'center', marginTop: space.sm, color: colors.textSecondary }}>Red shading = readings to review. Tap a tooth.</T>
             </View>
           </View>
         </Section>

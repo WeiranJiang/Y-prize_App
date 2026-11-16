@@ -67,7 +67,7 @@ export default function ArchDiagram({
           {frames.map((f) => {
             const u = f.tooth.universal;
             const c = crownFor(arch, f.tooth.position);
-            const m = sites ? undefined : marks.get(u);
+            const m = marks.get(u);
             const on = selected === u;
             const rx = (c.w / 2) * s * 0.92;
             const ry = (c.b / 2) * s * 0.85;

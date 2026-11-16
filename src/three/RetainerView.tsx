@@ -439,7 +439,7 @@ export default function RetainerView(props: Props) {
         const markerColors: number[] = [];
         for (const region of pr.regions) {
           positions.push(region.anchor[0] + cloud.offset[0], region.anchor[1] + cloud.offset[1], region.anchor[2] + cloud.offset[2]);
-          const rgb = Number.parseInt(region.color.slice(1), 16);
+          const rgb = Number.parseInt((region.markerColor ?? region.color).slice(1), 16);
           markerColors.push(((rgb >> 16) & 255) / 255, ((rgb >> 8) & 255) / 255, (rgb & 255) / 255);
         }
         sensorGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));

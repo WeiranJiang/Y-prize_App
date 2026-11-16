@@ -1,4 +1,5 @@
 /** Configured sensor locations use chemistry colours; the strip-health overlay uses labelled signal colours. */
+import { attentionSites } from '../domain/attention';
 import { Vec3 } from '../domain/arch';
 import { BiomarkerId, Status } from '../domain/biomarkers';
 import { sensorAnchor, configuredSensorRegions } from '../domain/sensorGeometry';
@@ -13,6 +14,8 @@ export interface Region {
   normal: Vec3;
   radius: number;
   color: string;
+  /** Preserve chemistry colour on sensor dots when the surrounding tooth is shaded. */
+  markerColor?: string;
   /** 0–1 — how strongly the colour replaces the neutral dots. */
   intensity: number;
   outline: boolean;
@@ -35,7 +38,10 @@ export function regionsForScan(scan: Scan | undefined, strip: Strip | undefined,
   if (!strip) return [];
   if (mode === 'signal') return scan ? signalRegions(scan, strip) : [];
   if (mode !== 'overview' && !strip.supported.includes(mode)) return [];
-  return configuredSensorRegions(strip, mode);
+  const flagged = new Set(attentionSites(scan, strip, mode).map(site => site.id));
+  return configuredSensorRegions(strip, mode).map(region => flagged.has(region.id)
+    ? { ...region, markerColor: region.color, color: colors.high, radius: Math.max(region.radius, 1.8) }
+    : region);
 }
 
 /** Strip-health view: local optical transmission per site + reference spots. */
