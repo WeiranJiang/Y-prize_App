@@ -158,7 +158,7 @@ export default function Chat() {
                 accessibilityLabel={mode === 'dentist' ? 'Message Melissa' : 'Ask the chatbot'} style={styles.input}
                 editable={!busy && !waiting} textAlignVertical="top"
               />
-              <Pressable accessibilityRole="button" accessibilityLabel={mode === 'dentist' ? 'Send message to Melissa' : 'Send to chatbot'} accessibilityState={{ disabled }} disabled={disabled} onPress={send} style={[styles.send, disabled && { opacity: 0.35 }]}>{mode === 'dentist' ? <T v="small" style={{ color: colors.textOnLight }}>Send</T> : <Icon name="send" size={18} color={colors.textOnLight} />}</Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel={mode === 'dentist' ? 'Send message to Melissa' : 'Send to chatbot'} accessibilityState={{ disabled }} disabled={disabled} onPress={send} style={[styles.send, disabled && { opacity: 0.35 }]}><Icon name="send" size={20} strokeWidth={1.8} color={colors.textOnLight} /></Pressable>
             </View>
           </View>
         </View>
@@ -187,5 +187,5 @@ const styles = StyleSheet.create({
   chip: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 8, backgroundColor: colors.bg2, borderWidth: 1, borderColor: colors.border },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, padding: space.sm, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   input: { flex: 1, minHeight: 40, maxHeight: 120, paddingHorizontal: 6, paddingTop: 10, paddingBottom: 10, color: colors.text, fontFamily: font.family, fontSize: 15, lineHeight: 21, outlineStyle: 'none' } as object,
-  send: { width: 44, height: 44, borderRadius: 10, backgroundColor: colors.ivory, alignItems: 'center', justifyContent: 'center' },
+  send: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.ivory, alignItems: 'center', justifyContent: 'center' },
 });
