@@ -128,7 +128,6 @@ export default function StripHealth() {
                 <T v="body">No scans on this strip yet.</T>
               )}
             </View>
-            <T v="small" style={{ fontSize: 11, marginTop: space.sm }}>Hours of wear are estimated from time the retainer spent out of the case.</T>
             {rateDelta != null && Math.abs(rateDelta) >= 0.05 ? (
               <T v="small" style={{ marginTop: space.md, color: colors.text }}>
                 Film is building {Math.abs(rateDelta * 100).toFixed(0)}% {rateDelta > 0 ? 'faster' : 'slower'} than on your previous strip.
@@ -175,7 +174,8 @@ export default function StripHealth() {
           </Card>
         </Section>
 
-        <Section title="Reference spots">
+        <Section>
+          <Disclosure title="Reference spots">
           <Card style={{ paddingVertical: 6 }}>
             {strip.referenceSpots.map((spot, i) => {
               const v = latest?.references.find((r) => r.spotId === spot.id)?.transmission;
@@ -190,9 +190,11 @@ export default function StripHealth() {
               );
             })}
           </Card>
+          </Disclosure>
         </Section>
 
-        <Section title="Effect on your readings">
+        <Section>
+          <Disclosure title="Effect on your readings">
           <Card>
             <KV k="Added uncertainty (typical)" v={h.addedUncertainty != null ? `± ${h.addedUncertainty.toFixed(2)} pH` : '—'} />
             <KV k="Sites withheld at last scan" v={`${h.lowSignalSites.length}`} />
@@ -201,9 +203,11 @@ export default function StripHealth() {
               pH is read as a ratio of two optical bands, so film mostly reduces signal strength rather than shifting the value. The app widens each reading's uncertainty as clarity falls. When a site drops below the quality floor, the app withholds it instead of estimating it.
             </T>
           </Card>
+          </Disclosure>
         </Section>
 
-        <Section title="Strip history">
+        <Section>
+          <Disclosure title="Strip history">
           <Card style={{ paddingVertical: 6 }}>
             <HistoryRow title={`${strip.id} · current`} sub={`Installed ${new Date(strip.installedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${h.sessions} sessions`} value={h.clarity != null ? pct(h.clarity) : '—'} />
             {previous.map((p) => (
@@ -215,6 +219,7 @@ export default function StripHealth() {
               />
             ))}
           </Card>
+          </Disclosure>
         </Section>
 
         <Section>

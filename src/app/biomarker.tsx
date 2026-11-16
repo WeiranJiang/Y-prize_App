@@ -8,6 +8,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { statLine } from '../components/BiomarkerCard';
 import LineChart, { LPoint } from '../components/charts/LineChart';
 import Sparkline from '../components/charts/Sparkline';
+import Disclosure from '../components/Disclosure';
 import { IconButton, Meta, Screen, Section, Segmented, StatusDot, StatusTag, T } from '../components/ui';
 import { siteSeries, siteTitle } from '../domain/analysis';
 import { BIOMARKERS, BiomarkerId, classify, formatValue, STATUS_RANK, unitSuffix } from '../domain/biomarkers';
@@ -93,7 +94,7 @@ export default function BiomarkerDetail() {
       <View style={{ paddingHorizontal: space.lg, marginTop: space.xl }}>
         <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
           <T v="number" style={{ fontSize: 52, letterSpacing: -1.2, fontWeight: '400' }}>{formatValue(b, stat.median)}</T>
-          <T v="body" style={{ marginLeft: 6, color: colors.textMuted }}>{unitSuffix(b).trim() || 'pH'}</T>
+          <T v="body" style={{ marginLeft: 6, color: colors.textSecondary }}>{unitSuffix(b).trim() || 'pH'}</T>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.lg, marginTop: 4 }}>
           <StatusTag status={stat.status} label={statLine(stat)} />
@@ -130,9 +131,7 @@ export default function BiomarkerDetail() {
           </View>
         )}
       </View>
-      <Meta style={{ paddingHorizontal: space.lg, marginTop: space.sm }}>
-        Shaded: configured research range (not clinically validated) · touch the chart to inspect
-      </Meta>
+
 
       {/* Locations */}
       <Section title="By location">
@@ -151,7 +150,6 @@ export default function BiomarkerDetail() {
                 <StatusDot status={status} size={6} />
                 <View style={{ width: 116 }}>
                   <T v="small" style={{ color: colors.text }} numberOfLines={1}>{t.number} · {t.surface}</T>
-                  <Meta style={{ fontSize: 11 }}>{t.tooth.shortName}</Meta>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Sparkline points={series.map((p) => p.value)} bands={b.bands} height={24} domain={yDomain} />
@@ -165,11 +163,13 @@ export default function BiomarkerDetail() {
         </View>
       </Section>
 
-      <Section title="About this measurement">
+      <Section>
+        <Disclosure title="About this measurement">
         <T v="small">{b.limitation}</T>
         <Meta style={{ marginTop: space.sm }}>
           Thresholds: borderline {b.bands.concern === 'low' ? '<' : '>'} {fmt(b.bands.mild)}, attention {b.bands.concern === 'low' ? '<' : '>'} {fmt(b.bands.elevated)}, high {b.bands.concern === 'low' ? '<' : '>'} {fmt(b.bands.high)}{unitSuffix(b)}
         </Meta>
+        </Disclosure>
       </Section>
     </Screen>
   );

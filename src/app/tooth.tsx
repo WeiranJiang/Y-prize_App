@@ -1,3 +1,4 @@
+import Disclosure from '../components/Disclosure';
 /**
  * Tooth-level monitoring: an occlusal schematic of one tooth with its
  * measurement locations, and the readings at the selected location.
@@ -203,14 +204,12 @@ export default function Tooth() {
                     <T v="small" style={{ color: colors.textSecondary }}>{b.name}</T>
                     <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 4 }}>
                       <T v="number" style={{ fontSize: 26 }}>{formatValue(b, r.reading.value)}</T>
-                      <T v="small" style={{ marginLeft: 4, color: colors.textMuted }}>{unitSuffix(b).trim() || 'pH'}</T>
+                      <T v="small" style={{ marginLeft: 4, color: colors.textSecondary }}>{unitSuffix(b).trim() || 'pH'}</T>
                     </View>
                     <View style={{ marginTop: 6 }}>
                       <StatusTag status={r.status} label={r.status === 'unavailable' ? 'Not measured' : r.status === 'normal' ? 'In range' : b.statusWords[r.status]} />
                     </View>
-                    <Meta style={{ marginTop: 6 }}>
-                      {r.reading.value != null ? `± ${formatValue(b, r.reading.uncertainty)} · ${confidenceOf(r.reading.quality)} quality` : 'Signal below quality floor'} · {r.site.id}
-                    </Meta>
+
                   </View>
                   <View style={{ width: 112, justifyContent: 'center' }}>
                     <Sparkline points={series.map((p) => p.value)} bands={b.bands} height={40} />
@@ -228,7 +227,8 @@ export default function Tooth() {
 
       {/* All locations summary */}
       {surfaces.length > 1 ? (
-        <Section title="All locations">
+        <Section>
+        <Disclosure title="All locations">
           <View style={styles.panel}>
             {surfaces.map((s, i) => (
               <Pressable key={s} onPress={() => setSurface(s)} style={[styles.locRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}>
@@ -239,6 +239,7 @@ export default function Tooth() {
             ))}
           </View>
           <Divider style={{ marginTop: space.xl, opacity: 0 }} />
+          </Disclosure>
         </Section>
       ) : null}
     </Screen>
