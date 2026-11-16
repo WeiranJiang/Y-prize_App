@@ -69,7 +69,6 @@ export default function ScanHistory() {
               {scan ? <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/scan-details', params: { id: scan.id } })} style={{ minHeight: 44, justifyContent: 'center' }}><T v="bodyStrong" style={{ marginTop: 4, fontSize: 15 }}>{scanTimeLabel(scan.at)} ›</T></Pressable> : <T v="body">No scans recorded yet</T>}
             </View>;
           })}
-          <Meta style={{ marginTop: space.md }}>Automatic case readouts appear here after syncing. This demo shows simulated history.</Meta>
         </Card>
       </Section>
       <Section title="Scan history">
@@ -105,8 +104,7 @@ export default function ScanHistory() {
             {LEVELS.map((color, index) => <View key={color} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><View style={{ width: 11, height: 11, borderRadius: 3, backgroundColor: color }} /><Meta>{index === 3 ? '3+' : index}</Meta></View>)}
             <Meta>sessions / day</Meta>
           </View>
-          <Meta style={{ marginTop: space.sm }}>{selected ? `${new Date(`${selected}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} · ${countText(byDay.get(selected)?.length ?? 0)}` : 'Tap a square for its daily count.'}</Meta>
-          <Meta style={{ marginTop: space.sm }}>Activity, not tooth health. Paired readings count once.</Meta>
+          {selected ? <Meta style={{ marginTop: space.sm }}>{ `${new Date(`${selected}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} · ${countText(byDay.get(selected)?.length ?? 0)}`}</Meta> : null}
         </Card>
       </Section>
     </>

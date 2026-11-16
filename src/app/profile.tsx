@@ -63,13 +63,12 @@ export default function Profile() {
       </Section>
 
       <Section>
-        <Disclosure title="Advanced demo settings" summary="Research thresholds and replacement limits">
+        <Disclosure title="Advanced demo settings">
       <Section title="Research thresholds · pH" style={{ paddingHorizontal: 0 }}>
         <Card>
           <Step label="Mild below" value={B.mild.toFixed(1)} onMinus={() => setB({ mild: r1(Math.max(B.elevated + 0.1, B.mild - 0.1)) })} onPlus={() => setB({ mild: r1(B.mild + 0.1) })} />
           <Step label="Elevated below" value={B.elevated.toFixed(1)} onMinus={() => setB({ elevated: r1(Math.max(B.high + 0.1, B.elevated - 0.1)) })} onPlus={() => setB({ elevated: r1(Math.min(B.mild - 0.1, B.elevated + 0.1)) })} />
           <Step label="High concern below" value={B.high.toFixed(1)} onMinus={() => setB({ high: r1(B.high - 0.1) })} onPlus={() => setB({ high: r1(Math.min(B.elevated - 0.1, B.high + 0.1)) })} />
-          <T v="small" style={{ marginTop: space.sm }}>Changing a threshold recolours the map and re-runs every rule.</T>
         </Card>
       </Section>
 

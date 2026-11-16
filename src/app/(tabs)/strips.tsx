@@ -51,7 +51,6 @@ export default function Strips() {
       <Screen>
         <View style={{ paddingHorizontal: space.lg }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}><T v="display">Strips</T></View>
-          <T v="small" style={{ marginTop: 2 }}>Your sensing strips and deliveries</T>
         </View>
 
         {/* Current strips */}
@@ -110,15 +109,12 @@ export default function Strips() {
               <T v="title" style={{ marginTop: 4 }}>
                 {plan.paused ? 'No deliveries' : pending ? `Arrives ${fmtDate(pending.eta)}` : `Around ${fmtDate(nextShip)}`}
               </T>
-              <T v="small" style={{ marginTop: 4, fontSize: 12 }}>We ship when you’re down to {plan.reorderAt} spare, based on how fast your strips wear.</T>
-              <Divider style={{ marginVertical: space.lg }} />
-              <Disclosure title="Delivery settings" summary={`${plan.perBox.upper} upper + ${plan.perBox.lower} lower per box`}>
+              <Disclosure title="Delivery settings">
               <Row label="Upper per box"><Stepper value={plan.perBox.upper} onChange={(v) => setPlan({ perBox: { ...plan.perBox, upper: v } })} /></Row>
               <Row label="Lower per box"><Stepper value={plan.perBox.lower} onChange={(v) => setPlan({ perBox: { ...plan.perBox, lower: v } })} /></Row>
               <Row label="Ship when spares reach"><Stepper value={plan.reorderAt} min={0} max={3} onChange={(v) => setPlan({ reorderAt: v })} /></Row>
               </Disclosure>
-              <Divider style={{ marginVertical: space.md }} />
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ marginTop: space.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <T v="small">${(plan.perBox.upper + plan.perBox.lower) * PRICE} per box · demo, no charge</T>
                 <Pressable onPress={() => setPlan({ paused: !plan.paused })} style={styles.pill}>
                   <T v="small" style={{ color: colors.text }}>{plan.paused ? 'Resume' : 'Pause'}</T>
@@ -138,7 +134,7 @@ export default function Strips() {
 
         {/* Orders */}
         <Section>
-          <Disclosure title="Order history" summary={`${orders.length} demo order${orders.length === 1 ? '' : 's'}`}>
+          <Disclosure title="Order history">
           <Card style={{ paddingVertical: 4 }}>
             {orders.length === 0 ? (
               <T v="small" style={{ paddingVertical: space.md }}>No orders yet</T>
@@ -157,7 +153,6 @@ export default function Strips() {
             )}
           </Card>
           </Disclosure>
-          <T v="small" style={{ marginTop: space.md, color: colors.textMuted, fontSize: 11 }}>Demo only. No real orders or payments are made.</T>
         </Section>
       </Screen>
 

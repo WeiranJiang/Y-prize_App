@@ -74,7 +74,7 @@ export default function StripHealth() {
                 ) : null}
               </View>
             </View>
-            <Disclosure title="Forecast details" summary={h.forecast ? `Based on ${h.forecast.n} scans` : 'At least 3 scans needed'}>
+            <Disclosure title="Forecast details">
               {h.forecast ? <T v="small">Fit R² {h.forecast.r2.toFixed(2)} · {(h.forecast.rate * 100 * h.hoursPerSession).toFixed(1)}% clarity loss per session</T> : <T v="small">Scan a few more times to estimate replacement timing.</T>}
             </Disclosure>
             <Divider style={{ marginVertical: space.lg }} />
@@ -218,7 +218,7 @@ export default function StripHealth() {
         </Section>
 
         <Section>
-          <Disclosure title="How replacement is decided" summary="Limits and the method behind the forecast">
+          <Disclosure title="How replacement is decided">
           <T v="small">
             {`• Replace now when clarity is below ${pct(L.clarityReplace)}, fewer than ${pct(L.usableMin - 0.25)} of sites are usable, or the ${L.maxDays}-day / ${L.maxSessions}-session validated limit is reached.\n• Replace soon when clarity is below ${pct(L.claritySoon)}, the forecast reaches the limit within 3 sessions, or usable sites fall below ${pct(L.usableMin)}.\n• Forecast: exponential attenuation fitted to the last 8 scans on this strip.\n\nThese are configurable engineering thresholds (Profile → Thresholds), not validated clinical limits.`}
           </T>

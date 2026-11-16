@@ -37,7 +37,7 @@ export default function ScanDetails() {
           <KV k="Areas to review" v={`${a.reviewSites.length}`} />
           <KV k="Strip" v={`${strip.arch === 'upper' ? 'Upper' : 'Lower'} · ${strip.id} · session ${scan.sessionIndex}${scan.baseline ? ' (baseline)' : ''}`} />
           <KV k="Strip clarity" v={pct(clarityOf(scan))} />
-          <Disclosure title="Technical details" summary="Wear time, exposure, calibration and readout timing">
+          <Disclosure title="Technical details">
           <KV k="Session wear" v={`${scan.sessionMinutes} min (demo protocol)`} />
           <KV k="Strip exposure" v={`${scan.exposureHours.toFixed(0)} h`} />
           <KV k="Readout delay" v={`${scan.readoutDelayMin.toFixed(1)} min · window ${scan.readoutWindowMin} min`} />

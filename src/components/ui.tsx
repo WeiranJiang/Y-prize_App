@@ -239,7 +239,7 @@ export function KV({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
 
 /** Small metadata line, e.g. "8:42 AM · Quality 96%". */
 export function Meta({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
-  return <T v="small" style={[{ fontSize: 12, color: colors.textMuted }, style]}>{children}</T>;
+  return <T v="small" style={[{ fontSize: 13, color: colors.textSecondary }, style]}>{children}</T>;
 }
 
 const styles = StyleSheet.create({

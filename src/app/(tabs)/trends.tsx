@@ -118,7 +118,6 @@ export default function Findings() {
 
       </View>
 
-      <T v="small" style={{ paddingHorizontal: space.lg, marginTop: space.sm }}>Review flagged readings, then tap a tooth to see its history.</T>
       <View style={{ marginHorizontal: space.lg, marginTop: space.md }}>
       <T v="bodyStrong" style={{ fontSize: 15 }}>Measurements</T>
       {/* Biomarker multi-select */}
@@ -134,7 +133,6 @@ export default function Findings() {
         })}
       </View>
 
-      <Meta style={{ marginTop: space.sm }}>Choose one or more measurements. At least one stays selected.</Meta>
       </View>
       {/* Time range */}
       <View style={styles.rangeBox}>
@@ -160,7 +158,6 @@ export default function Findings() {
         {scans.length > 1 ? <RangeSlider count={scans.length} value={[i0, i1]} onChange={setRange} breaks={breaks} /> : null}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Meta style={{ fontSize: 11 }}>{scans[0] ? fmtDay(scans[0].at) : ''}</Meta>
-          <Meta style={{ fontSize: 11 }}>Drag the ends or the middle</Meta>
           <Meta style={{ fontSize: 11 }}>{scans[last] ? fmtDay(scans[last].at) : ''}</Meta>
         </View>
         </Disclosure>
@@ -173,7 +170,6 @@ export default function Findings() {
             <ArchDiagram key={arch} arch={arch} marks={marks} selected={selTooth} onSelect={setTooth} numbering={numbering} />
           </View>
           <View style={{ paddingBottom: space.md }}><Legend /></View>
-          <Meta style={{ textAlign: 'center', padding: space.sm }}>Map shows the last scan in your selected dates</Meta>
         </View>
       </Section>
 
@@ -251,7 +247,6 @@ export default function Findings() {
               );
             })}
           </View>
-          <Meta style={{ marginTop: space.sm }}>Change shown from the start to the end of the selected range</Meta>
         </Section>
       ) : null}
 
@@ -286,7 +281,6 @@ export default function Findings() {
           )}
         </View>
         {findings.length > 5 ? <Button kind="ghost" label={showAll ? 'Show fewer readings' : `Show all ${findings.length} readings`} onPress={() => setShowAll(v => !v)} /> : null}
-        <Meta style={{ marginTop: space.sm }}>Values are the latest available in this range; changes compare the first and last available readings.</Meta>
       </Section>
     </Screen>
   );

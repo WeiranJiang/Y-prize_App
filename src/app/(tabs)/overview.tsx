@@ -48,7 +48,7 @@ export default function Overview() {
       {watch.length ? <Section title="Worth a closer look"><T v="body">{watch.map(b => BIOMARKERS[b.id].shortName).join(', ')} {watch.length === 1 ? 'has' : 'have'} flagged readings or a worsening trend.</T></Section> : null}
       {/* Biomarkers */}
       <Section title="Measurements">
-        <T v="small" style={{ marginBottom: space.md }}>Readings in range over the past 30 days. Tap for details and locations.</T>
+        <T v="body" style={{ marginBottom: space.md }}>Past 30 days</T>
         <View style={styles.grid}>
           {o.biomarkers.map((b) => {
             const bm = BIOMARKERS[b.id];

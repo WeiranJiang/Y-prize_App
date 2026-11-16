@@ -106,14 +106,11 @@ export default function Home() {
             {mapView === '3d' ? (
               <View style={{ height: Math.max(360, H * 0.44) }}>
                 <RetainerView key={arch} arch={arch} style={{ flex: 1 }} regions={regions} reveal selectedTooth={loupe} onSelect={onSelect} active={focused && loupe == null} />
-                <View pointerEvents="none" style={styles.hint}>
-                  <T v="small">Tap a tooth for readings · drag to rotate</T>
-                </View>
+
               </View>
             ) : (
               <View style={{ paddingHorizontal: 6, paddingTop: space.sm, paddingBottom: space.md }}>
                 <ArchDiagram key={arch} arch={arch} marks={marks} selected={loupe} onSelect={openTooth} numbering={numbering} />
-                <Meta style={{ textAlign: 'center' }}>Tap a numbered tooth to see its readings</Meta>
               </View>
             )}
             <View style={{ paddingBottom: space.md }}>
@@ -178,7 +175,7 @@ export default function Home() {
           </View>
           {recommendations.length > 3 ? <Button label={allRecommendations ? 'Show fewer steps' : `Show all ${recommendations.length} steps`} kind="ghost" onPress={() => setAllRecommendations(v => !v)} /> : null}
           <Pressable onPress={() => router.push('/about')} style={{ marginTop: space.lg }}>
-            <Meta>Research indicators — not a diagnosis of decay or gum disease. How findings are made ›</Meta>
+            <T v="body" style={{ fontSize: 14 }}>About these readings ›</T>
           </Pressable>
         </Section>
       </Screen>
