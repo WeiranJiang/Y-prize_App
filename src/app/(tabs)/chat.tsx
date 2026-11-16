@@ -135,7 +135,6 @@ export default function Chat() {
           </View>
 
           <ScrollView ref={scroll} style={{ flex: 1 }} contentContainerStyle={{ padding: space.lg, paddingBottom: space.sm }} keyboardShouldPersistTaps="handled" onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}>
-            {mode === 'dentist' && !drafts.length ? <T v="body">Write a message for Melissa, or ask the chatbot for a quick answer.</T> : null}
             {(mode === 'dentist' ? drafts : msgs).map(message => message.role === 'system' ? <T key={message.id} v="small" accessibilityLiveRegion="polite" style={{ marginVertical: space.md }}>{message.text}</T> : (
               <View key={message.id} style={[styles.message, message.role === 'user' ? { alignSelf: 'flex-end' } : { alignSelf: 'flex-start' }]}>
                 <T v="small" style={{ marginBottom: 5 }}>{message.role === 'user' ? (mode === 'dentist' ? 'You · draft, not sent' : 'You') : 'OraCare chatbot'}</T>
@@ -145,8 +144,8 @@ export default function Chat() {
               </View>
             ))}
             {busy ? <T v="small" accessibilityLiveRegion="polite" style={{ paddingVertical: space.sm }}>Preparing an answer…</T> : null}
-            {(mode === 'dentist' ? drafts.length === 0 : msgs.length === 1) ? <View style={styles.starters}>
-              {CARE_STARTERS.map(starter => <Pressable key={starter.label} accessibilityRole="button" accessibilityLabel={`Draft message: ${starter.label}`} onPress={() => { if (mode === 'dentist') setDentistText(starter.text); else setText(starter.text); input.current?.focus(); }} style={styles.chip}><T v="small" style={{ color: colors.text }}>{starter.label}</T></Pressable>)}
+            {mode === 'bot' && msgs.length === 1 ? <View style={styles.starters}>
+              {CARE_STARTERS.map(starter => <Pressable key={starter.label} accessibilityRole="button" accessibilityLabel={`Draft message: ${starter.label}`} onPress={() => { setText(starter.text); input.current?.focus(); }} style={styles.chip}><T v="small" style={{ color: colors.text }}>{starter.label}</T></Pressable>)}
             </View> : null}
           </ScrollView>
 
