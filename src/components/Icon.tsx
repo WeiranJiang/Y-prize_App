@@ -3,13 +3,16 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { colors } from '../theme/tokens';
 
 export type IconName =
-  | 'home' | 'explore' | 'trends' | 'profile' | 'case' | 'chevron' | 'chevronLeft' | 'close'
+  | 'home' | 'log' | 'camera' | 'label' | 'explore' | 'trends' | 'profile' | 'case' | 'chevron' | 'chevronLeft' | 'close'
   | 'info' | 'strip' | 'check' | 'alert' | 'refresh' | 'search' | 'drop' | 'spark' | 'layers' | 'clock' | 'compare' | 'chat' | 'box' | 'pulse' | 'send' | 'zoom' | 'play' | 'pause';
 
 export default function Icon({ name, size = 22, color = colors.text, strokeWidth = 1.4 }: { name: IconName; size?: number; color?: string; strokeWidth?: number }) {
   const p = { stroke: color, strokeWidth, fill: 'none', strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
+      {name === 'log' && <><Rect x="5" y="4" width="14" height="17" rx="2" {...p} /><Path d="M9 3h6v4H9zM9 12h6M9 16h4" {...p} /></>}
+      {name === 'camera' && <><Path d="M8 6l1.5-2h5L16 6h4v14H4V6z" {...p} /><Circle cx="12" cy="13" r="4" {...p} /></>}
+      {name === 'label' && <><Rect x="5" y="3" width="14" height="18" rx="2" {...p} /><Path d="M8 7h8M8 10h8M8 14h3M14 14h2M8 17h3M14 17h2" {...p} /></>}
       {name === 'home' && (
         <>
           <Path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z" {...p} />

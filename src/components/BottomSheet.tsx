@@ -53,7 +53,7 @@ export default function BottomSheet({ open, onClose, children, maxHeight = 0.58 
         <View {...pan.panHandlers} style={styles.grabArea}>
           <View style={styles.grab} />
         </View>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 12 }}>
+        <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 12 }}>
           {children}
         </ScrollView>
       </Animated.View>

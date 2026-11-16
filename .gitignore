@@ -16,3 +16,6 @@ server/node_modules/
 !.env.example
 *.pem
 *.key
+
+# Generated, self-hosted OCR assets
+public/assets/food-reader/

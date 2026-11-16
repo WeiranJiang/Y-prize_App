@@ -9,6 +9,7 @@ const TABS: { name: string; label: string; icon: IconName }[] = [
   { name: 'index', label: 'Home', icon: 'home' },
   { name: 'trends', label: 'Findings', icon: 'trends' },
   { name: 'overview', label: 'Overview', icon: 'pulse' },
+  { name: 'log', label: 'Log', icon: 'log' },
   { name: 'chat', label: 'Ask', icon: 'chat' },
   { name: 'strips', label: 'Strips', icon: 'box' },
 ];
