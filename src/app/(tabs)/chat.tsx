@@ -131,7 +131,7 @@ export default function Chat() {
               <View style={{ flex: 1 }}><T v="bodyStrong">{mode === 'dentist' ? 'Melissa Pike' : 'OraCare chatbot'}</T><T v="small">{mode === 'dentist' ? 'Your dentist' : 'Automated answers'}</T></View>
 
             </View>
-            <T v="small" style={styles.notice}>{mode === 'dentist' ? 'Ask about your readings, retainer care or a concern. Messaging isn’t connected yet; drafts stay here until you reload.' : 'Get a faster answer from the chatbot. Automated guidance, not a reply from Melissa.'}</T>
+            {mode === 'bot' ? <T v="small" style={styles.notice}>Get a faster answer from the chatbot. Automated guidance, not a reply from Melissa.</T> : null}
           </View>
 
           <ScrollView ref={scroll} style={{ flex: 1 }} contentContainerStyle={{ padding: space.lg, paddingBottom: space.sm }} keyboardShouldPersistTaps="handled" onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}>
