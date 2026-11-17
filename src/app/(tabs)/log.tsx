@@ -6,7 +6,7 @@ import BottomSheet from '../../components/BottomSheet';
 import Disclosure from '../../components/Disclosure';
 import { Button, Card, Meta, Screen, Section, T } from '../../components/ui';
 import { scanTimeLabel } from '../../domain/dates';
-import { EMPTY_FOOD, FoodDetails, FoodEntry, FoodSignal, PhotoKind } from '../../domain/food';
+import { EMPTY_FOOD, foodSummary, FoodDetails, FoodEntry, FoodSignal, PhotoKind } from '../../domain/food';
 import { readFoodPhoto } from '../../domain/readFoodPhoto';
 import { useFoodLog } from '../../state/foodLog';
 import { colors, font, radius, space } from '../../theme/tokens';
@@ -20,6 +20,7 @@ export default function Log() {
   const [minutes, setMinutes] = useState('');
   const [atLeast, setAtLeast] = useState(false);
   const [preview, setPreview] = useState('');
+  const [savedPhoto, setSavedPhoto] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState('');
   const [message, setMessage] = useState('');
@@ -38,7 +39,7 @@ export default function Log() {
     setSource(entry?.source ?? kind);
     setMinutes(entry ? String(entry.durationMinutes) : '');
     setAtLeast(entry?.durationAtLeast ?? false);
-    setPreview(''); setMessage(''); setProgress(''); setOpen(true);
+    setPreview(entry?.photo ?? ''); setSavedPhoto(entry?.photo); setMessage(''); setProgress(''); setOpen(true);
   };
   const photo = async (camera: boolean) => {
     if (working.current || source === 'manual') return;
@@ -60,6 +61,14 @@ export default function Log() {
       const output = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: 0.85 });
       rendered.release(); context.release();
       setPreview(output.uri);
+      const thumbnailContext = ImageManipulator.manipulate(output.uri);
+      thumbnailContext.resize(asset.width >= asset.height ? { width: 480 } : { height: 480 });
+      const thumbnail = await thumbnailContext.renderAsync();
+      try {
+        const small = await thumbnail.saveAsync({ format: SaveFormat.JPEG, compress: 0.65, base64: true });
+        const data = small.base64 ? `data:image/jpeg;base64,${small.base64}` : undefined;
+        setSavedPhoto(data && data.length <= 250000 ? data : undefined);
+      } finally { thumbnail.release(); thumbnailContext.release(); }
       let timer: ReturnType<typeof setTimeout> | undefined;
       let reading = true;
       try {
@@ -82,7 +91,7 @@ export default function Log() {
     working.current = true; setBusy(true); setMessage('');
     try {
       const now = new Date();
-      await save({ ...draft, name: draft.name.trim(), id: editing?.id ?? `food-${now.getTime()}-${Math.random().toString(36).slice(2, 10)}`, at: editing?.at ?? now.toISOString(), durationMinutes: duration, durationAtLeast: atLeast, source });
+      await save({ ...draft, name: draft.name.trim(), id: editing?.id ?? `food-${now.getTime()}-${Math.random().toString(36).slice(2, 10)}`, at: editing?.at ?? now.toISOString(), durationMinutes: duration, durationAtLeast: atLeast, source, photo: savedPhoto });
       setOpen(false); setPreview(''); setNotice(editing ? 'Entry updated.' : 'Added to your log.'); setDeleted(null);
     } catch { setMessage('Couldn’t save this entry. Your draft is still here; please try again. Your device may be out of storage.'); }
     finally { working.current = false; setBusy(false); }
@@ -118,15 +127,13 @@ export default function Log() {
         </Section> : null}
         <Section title="Your entries">
           {!entries.length ? <Card><T v="body">No entries yet.</T></Card> : <View style={{ gap: space.sm }}>{entries.slice(0, 15).map(entry => <Card key={entry.id} onPress={() => start(entry.source, entry)}>
+            {entry.photo ? <View style={styles.entryPhoto}><Image source={{ uri: entry.photo }} accessibilityLabel={`${entry.name} photo`} style={styles.zoomedPhoto} resizeMode="cover" /></View> : null}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}><T v="bodyStrong" style={{ flex: 1 }}>{entry.name}</T><T v="body" style={{ fontSize: 14 }}>Edit ›</T></View>
-            <Meta style={{ marginTop: 4 }}>{scanTimeLabel(entry.at)} · {entry.durationAtLeast ? 'at least ' : ''}{entry.durationMinutes} min</Meta>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.sm }}>
-              {entry.sugar === 'yes' ? <T v="small">Sugar noted</T> : null}
-              {entry.acidic === 'yes' ? <T v="small">Possible acid exposure</T> : null}
-              {entry.sticky === 'yes' ? <T v="small">Sticky texture</T> : null}
-            </View>
+            <Meta style={{ marginTop: 4 }}>{scanTimeLabel(entry.at)} · {entry.durationAtLeast ? 'at least ' : ''}{entry.durationMinutes} min · {entry.source === 'meal' ? 'Meal photo' : entry.source === 'label' ? 'Label photo' : 'Manual entry'}</Meta>
+            <T v="small" style={{ marginTop: space.sm }}>{foodSummary(entry)}</T>
+            {entry.note ? <View style={{ marginTop: space.sm }}><T v="small" style={{ color: colors.text }}>Notes & assumptions</T><T v="small" style={{ marginTop: 4 }}>{entry.note}</T></View> : null}
           </Card>)}{entries.length > 15 ? <Disclosure title={`Older entries (${entries.length - 15})`}>{entries.slice(15).map(entry => <Button key={entry.id} label={`${entry.name} · ${entry.durationMinutes} min`} kind="ghost" onPress={() => start(entry.source, entry)} />)}</Disclosure> : null}</View>}
-          <View style={{ marginTop: space.lg }}><Disclosure title="Storage & privacy"><T v="body">Entries stay on this device; photos aren’t saved in your log. Clearing app or browser storage deletes your entries.</T></Disclosure></View>
+          <View style={{ marginTop: space.lg }}><Disclosure title="Storage & privacy"><T v="body">Entries and small photo previews stay on this device. Clearing app or browser storage deletes your entries.</T></Disclosure></View>
         </Section>
       </Screen>
       <BottomSheet open={open} onClose={() => { if (!busy) setOpen(false); }} maxHeight={0.92}>
@@ -135,7 +142,7 @@ export default function Log() {
           <T v="small">{source === 'label' ? 'Include the product name, sugars and ingredients.' : 'Review the food name before saving.'}</T>
           <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.md }}><Button label="Take photo" icon="camera" style={{ flex: 1, paddingHorizontal: 8 }} disabled={busy} onPress={() => photo(true)} /><Button label="Choose photo" kind="secondary" style={{ flex: 1, paddingHorizontal: 8 }} disabled={busy} onPress={() => photo(false)} /></View>
           <Meta style={{ marginTop: space.sm }}>{Platform.OS === 'web' ? 'Read on your device. Internet needed on first use.' : 'Photo suggestions work in the web demo.'}</Meta>
-          {preview ? <Image source={{ uri: preview }} accessibilityLabel="Selected food or label photo" style={{ height: 110, borderRadius: radius.sm, marginTop: space.sm }} resizeMode="contain" /> : null}
+          {preview ? <Image source={{ uri: preview }} accessibilityLabel="Selected food or label photo" style={{ height: 180, borderRadius: radius.sm, marginTop: space.sm }} resizeMode={source === 'label' ? 'contain' : 'cover'} /> : null}
         </View> : null}
         {busy && progress ? <View style={{ marginTop: space.md }}><T v="small" accessibilityLiveRegion="polite">{progress}</T><Button label="Type it instead" kind="ghost" onPress={() => cancelReading.current?.()} /></View> : null}
         {message ? <T v="small" accessibilityLiveRegion="polite" style={{ marginTop: space.md }}>{message}</T> : null}
@@ -157,6 +164,8 @@ export default function Log() {
   );
 }
 const styles = StyleSheet.create({
+  entryPhoto: { height: 160, overflow: 'hidden', borderRadius: radius.sm, marginBottom: space.md },
+  zoomedPhoto: { width: '100%', height: '100%', transform: [{ scale: 1.06 }] },
   input: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.bg2, color: colors.text, padding: space.md, marginTop: space.sm, minHeight: 48, fontFamily: font.family, fontSize: 15 },
   chip: { minHeight: 44, paddingHorizontal: space.md, alignItems: 'center', justifyContent: 'center', borderRadius: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg2 },
   selected: { borderColor: colors.textSecondary, backgroundColor: colors.surfaceRaised },

@@ -22,3 +22,12 @@ test('label reader distinguishes total from added sugar and preserves missing ev
   assert.equal(foodFromLabel('a photograph of a table'), null);
   assert.equal(foodFromLabel('Ingredients: sugar, flour, salt')?.sugar, 'yes');
 });
+
+test('food photo previews accept only bounded embedded JPEGs and old entries still load', () => {
+  const entry = { ...EMPTY_FOOD, id: 'photo', at: '2026-11-15T12:00:00Z', name: 'Toast', durationMinutes: 15, durationAtLeast: false, source: 'meal' };
+  assert.ok(validFoodEntry(entry));
+  assert.ok(validFoodEntry({ ...entry, photo: 'data:image/jpeg;base64,/9j/AA==' }));
+  for (const photo of ['https://example.com/track.jpg', 'blob:temporary', 'data:image/svg+xml;base64,PHN2Zz4=', 'data:image/jpeg;base64,' + 'A'.repeat(250000)]) {
+    assert.equal(validFoodEntry({ ...entry, photo }), false);
+  }
+});
