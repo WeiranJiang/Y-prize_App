@@ -40,6 +40,8 @@ interface Props {
   /** Which retainer to draw. Changing it requires a remount (use `key={arch}`). */
   arch?: Arch;
   regions: Region[];
+  /** Hide physical markers and chemistry overlays while retaining attention shading. */
+  showSensors?: boolean;
   style?: StyleProp<ViewStyle>;
   selectedTooth?: number | null;
   selectedSiteId?: string | null;
@@ -181,11 +183,11 @@ export default function RetainerView(props: Props) {
   // Repaint target colours whenever the measurement overlay changes.
   useEffect(() => {
     const b = colorBuf.current;
-    paintCloud(cloud, props.regions, { color: b.target, region: b.region, outline: b.outline });
+    paintCloud(cloud, props.showSensors === false ? props.regions.map(r => r.markerColor ? r : { ...r, intensity: 0, outline: false }) : props.regions, { color: b.target, region: b.region, outline: b.outline });
     regionIds.current = props.regions.map((r) => r.id);
     b.dirty = true;
     b.mixT = 0;
-  }, [props.regions, cloud]);
+  }, [props.regions, props.showSensors, cloud]);
 
   // Camera focus on a tooth.
   useEffect(() => {
@@ -239,7 +241,7 @@ export default function RetainerView(props: Props) {
       return { x: ((v.x + 1) / 2) * layout.current.w, y: ((1 - v.y) / 2) * layout.current.h, z: v.z };
     };
     let best: { d: number; id: string; tooth: number } | null = null;
-    for (const r of p.current.regions) {
+    for (const r of p.current.showSensors === false ? [] : p.current.regions) {
       const s = toScreen([r.anchor[0] + cloud.offset[0], r.anchor[1] + cloud.offset[1], r.anchor[2] + cloud.offset[2]]);
       const d = Math.hypot(s.x - x, s.y - y);
       if (d < 30 && (!best || d < best.d)) best = { d, id: r.id, tooth: r.tooth };
@@ -433,6 +435,7 @@ export default function RetainerView(props: Props) {
       raf.current = requestAnimationFrame(loop);
       const pr = p.current;
       if (pr.active === false) return;
+      sensorPoints.visible = pr.showSensors !== false;
       if (pr.regions !== lastSensorRegions) {
         lastSensorRegions = pr.regions;
         const positions: number[] = [];

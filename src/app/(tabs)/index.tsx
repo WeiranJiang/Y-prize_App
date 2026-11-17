@@ -24,6 +24,7 @@ export default function Home() {
   const [loupe, setLoupe] = useState<number | null>(null);
   const [searching, setSearching] = useState(false);
   const [sensorType, setSensorType] = useState<'overview' | BiomarkerId>('overview');
+  const [showSensors, setShowSensors] = useState(true);
   const [mapView, setMapView] = useState<'3d' | 'chart'>('3d');
   const [allRecommendations, setAllRecommendations] = useState(false);
   const [query, setQuery] = useState('');
@@ -111,9 +112,10 @@ export default function Home() {
                 <T v="small" style={{ color: sensorType === id ? colors.text : colors.textSecondary }}>{id === 'overview' ? 'All sensors' : BIOMARKERS[id].shortName}</T>
               </Pressable>)}
             </View>
+            {mapView === '3d' ? <Pressable accessibilityRole="button" accessibilityLabel={showSensors ? 'Hide sensors' : 'Show sensors'} accessibilityState={{ expanded: showSensors }} onPress={() => setShowSensors(value => !value)} style={{ alignSelf: 'flex-end', marginRight: space.md, minHeight: 44, paddingHorizontal: space.md, justifyContent: 'center', borderRadius: 8, backgroundColor: colors.bg2 }}><T v="small" style={{ color: colors.text }}>{showSensors ? 'Hide sensors' : 'Show sensors'}</T></Pressable> : null}
             {mapView === '3d' ? (
               <View style={{ height: Math.max(360, H * 0.44) }}>
-                <RetainerView key={arch} arch={arch} style={{ flex: 1 }} regions={regions} reveal selectedTooth={loupe} onSelect={onSelect} active={focused && loupe == null} />
+                <RetainerView showSensors={showSensors} key={arch} arch={arch} style={{ flex: 1 }} regions={regions} reveal selectedTooth={loupe} onSelect={onSelect} active={focused && loupe == null} />
 
               </View>
             ) : (
@@ -122,7 +124,7 @@ export default function Home() {
               </View>
             )}
             <View style={{ paddingBottom: space.md }}>
-              <BiomarkerLegend only={[]} />
+              {mapView !== '3d' || showSensors ? <BiomarkerLegend only={[]} /> : null}
               <T v="small" style={{ textAlign: 'center', marginTop: space.sm, color: colors.textSecondary }}>Orange: watch · Red: needs attention · Tap a tooth</T>
             </View>
           </View>
