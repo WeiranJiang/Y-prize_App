@@ -126,12 +126,18 @@ export default function Log() {
           <View style={{ gap: space.sm }}>{recent.map(entry => <Button key={entry.id} label={`${entry.name} +`} kind="secondary" onPress={() => { start('manual'); setDraft({ name: entry.name, sugar: entry.sugar, acidic: entry.acidic, sticky: entry.sticky, note: entry.note }); }} />)}</View>
         </Section> : null}
         <Section title="Your entries">
-          {!entries.length ? <Card><T v="body">No entries yet.</T></Card> : <View style={{ gap: space.sm }}>{entries.slice(0, 15).map(entry => <Card key={entry.id} onPress={() => start(entry.source, entry)}>
-            {entry.photo ? <View style={styles.entryPhoto}><Image source={{ uri: entry.photo }} accessibilityLabel={`${entry.name} photo`} style={styles.zoomedPhoto} resizeMode="cover" /></View> : null}
+          {!entries.length ? <Card><T v="body">No entries yet.</T></Card> : <View style={{ gap: space.sm }}>{entries.slice(0, 15).map(entry => <Card key={entry.id} style={styles.entryCard} onPress={() => start(entry.source, entry)}>
+            {entry.photo ? <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+              <Image source={{ uri: entry.photo }} accessibilityLabel={`${entry.name} photo`} style={styles.zoomedPhoto} resizeMode="cover" />
+              <View style={[StyleSheet.absoluteFill, styles.photoShade]} />
+            </View> : null}
+            <View style={[styles.entryContent, entry.photo && { minHeight: 200, justifyContent: 'flex-end' }]}>
+
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}><T v="bodyStrong" style={{ flex: 1 }}>{entry.name}</T><T v="body" style={{ fontSize: 14 }}>Edit ›</T></View>
-            <Meta style={{ marginTop: 4 }}>{scanTimeLabel(entry.at)} · {entry.durationAtLeast ? 'at least ' : ''}{entry.durationMinutes} min · {entry.source === 'meal' ? 'Meal photo' : entry.source === 'label' ? 'Label photo' : 'Manual entry'}</Meta>
-            <T v="small" style={{ marginTop: space.sm }}>{foodSummary(entry)}</T>
-            {entry.note ? <View style={{ marginTop: space.sm }}><T v="small" style={{ color: colors.text }}>Notes & assumptions</T><T v="small" style={{ marginTop: 4 }}>{entry.note}</T></View> : null}
+            <Meta style={{ marginTop: 4, color: entry.photo ? '#E5E5E5' : colors.textSecondary }}>{scanTimeLabel(entry.at)} · {entry.durationAtLeast ? 'at least ' : ''}{entry.durationMinutes} min · {entry.source === 'meal' ? 'Meal photo' : entry.source === 'label' ? 'Label photo' : 'Manual entry'}</Meta>
+            <T v="small" style={{ marginTop: space.sm, color: entry.photo ? '#E5E5E5' : colors.textSecondary }}>{foodSummary(entry)}</T>
+            {entry.note ? <View style={{ marginTop: space.sm }}><T v="small" style={{ color: colors.text }}>Notes & assumptions</T><T v="small" style={{ marginTop: 4, color: entry.photo ? '#E5E5E5' : colors.textSecondary }}>{entry.note}</T></View> : null}
+            </View>
           </Card>)}{entries.length > 15 ? <Disclosure title={`Older entries (${entries.length - 15})`}>{entries.slice(15).map(entry => <Button key={entry.id} label={`${entry.name} · ${entry.durationMinutes} min`} kind="ghost" onPress={() => start(entry.source, entry)} />)}</Disclosure> : null}</View>}
           <View style={{ marginTop: space.lg }}><Disclosure title="Storage & privacy"><T v="body">Entries and small photo previews stay on this device. Clearing app or browser storage deletes your entries.</T></Disclosure></View>
         </Section>
@@ -164,7 +170,9 @@ export default function Log() {
   );
 }
 const styles = StyleSheet.create({
-  entryPhoto: { height: 160, overflow: 'hidden', borderRadius: radius.sm, marginBottom: space.md },
+  entryCard: { padding: 0, overflow: 'hidden' },
+  entryContent: { padding: space.lg },
+  photoShade: { backgroundColor: 'rgba(10,10,10,0.68)' },
   zoomedPhoto: { width: '100%', height: '100%', transform: [{ scale: 1.06 }] },
   input: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.bg2, color: colors.text, padding: space.md, marginTop: space.sm, minHeight: 48, fontFamily: font.family, fontSize: 15 },
   chip: { minHeight: 44, paddingHorizontal: space.md, alignItems: 'center', justifyContent: 'center', borderRadius: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg2 },
