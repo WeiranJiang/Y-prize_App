@@ -1,6 +1,6 @@
 import type * as Mobilenet from '@tensorflow-models/mobilenet';
 import type { FoodDetails, PhotoKind } from './food';
-import { EMPTY_FOOD } from './food';
+import { estimateFood } from './foodEstimates';
 import { foodFromLabel } from './labelFood';
 
 let model: Promise<Mobilenet.MobileNet> | undefined;
@@ -40,5 +40,5 @@ export async function readFoodPhoto(uri: string, kind: PhotoKind, progress: (mes
   const best = predictions[0];
   if (!best || best.probability < 0.2 || !FOOD_CLASSES.test(best.className)) throw new Error('I couldn’t identify this food confidently. Type a short name to finish the log.');
   const name = best.className.split(',')[0].replace(/_/g, ' ').trim();
-  return { ...EMPTY_FOOD, name: name.charAt(0).toUpperCase() + name.slice(1), note: 'Photo suggestion—check the food name. Sugar, acidity and texture can’t be confirmed from appearance alone.' };
+  return estimateFood(name.charAt(0).toUpperCase() + name.slice(1));
 }

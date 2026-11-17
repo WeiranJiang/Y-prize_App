@@ -7,6 +7,7 @@ import Disclosure from '../../components/Disclosure';
 import { Button, Card, Meta, Screen, Section, T } from '../../components/ui';
 import { scanTimeLabel } from '../../domain/dates';
 import { EMPTY_FOOD, foodSummary, FoodDetails, FoodEntry, FoodSignal, PhotoKind } from '../../domain/food';
+import { estimateFood } from '../../domain/foodEstimates';
 import { readFoodPhoto } from '../../domain/readFoodPhoto';
 import { useFoodLog } from '../../state/foodLog';
 import { colors, font, radius, space } from '../../theme/tokens';
@@ -154,6 +155,11 @@ export default function Log() {
         {message ? <T v="small" accessibilityLiveRegion="polite" style={{ marginTop: space.md }}>{message}</T> : null}
         <T v="bodyStrong" style={{ marginTop: space.lg }}>Food or drink</T>
         <TextInput autoFocus={source === 'manual'} returnKeyType="done" editable={!busy} value={draft.name} onChangeText={name => setDraft(current => ({ ...current, name }))} placeholder="e.g. coffee with sugar, toast" placeholderTextColor={colors.textMuted} maxLength={120} accessibilityLabel="Food or drink name" style={styles.input} />
+        {draft.name.trim() ? <View style={{ marginTop: space.sm }}>
+          <T v="small">{foodSummary(draft)}</T>
+          {draft.note.startsWith('Estimated') ? <T v="small" style={{ marginTop: 4 }}>Estimates · check ingredients and edit below.</T> : null}
+          {source !== 'label' ? <Button label="Estimate sugar, acid & texture" kind="ghost" disabled={busy} onPress={() => setDraft(estimateFood(draft.name.trim()))} /> : null}
+        </View> : null}
         <T v="bodyStrong" style={{ marginTop: space.lg }}>How long did you eat or sip?</T>
         <T v="small" style={{ marginTop: 4 }}>First bite or sip to last.</T>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.md }}>{[5, 15, 30, 60].map(value => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: duration === value && (value !== 60 || atLeast), disabled: busy }} disabled={busy} onPress={() => { setMinutes(String(value)); setAtLeast(value === 60); }} style={[styles.chip, duration === value && (value !== 60 || atLeast) && styles.selected]}><T v="small">{value === 60 ? '60+ min' : `${value} min`}</T></Pressable>)}</View>
