@@ -21,7 +21,7 @@ const SIZE = 248;
  * Home screen, with that tooth's readings underneath. Dragging the timeline
  * replays every scan, so the tooth visibly changes over time.
  */
-export default function Loupe({ tooth, regions, onClose }: { tooth: number | null; regions: Region[]; onClose: () => void }) {
+export default function Loupe({ tooth, regions, showSensors = true, onClose }: { tooth: number | null; regions: Region[]; showSensors?: boolean; onClose: () => void }) {
   const { arch, state, stripById } = useStore();
   const scans = useMemo(
     () => state.scans.filter((s) => stripById(s.stripId)?.arch === arch).sort((a, b) => +new Date(a.at) - +new Date(b.at)),
@@ -73,6 +73,7 @@ export default function Loupe({ tooth, regions, onClose }: { tooth: number | nul
               arch={arch}
               style={{ width: SIZE, height: SIZE }}
               regions={regionsAt}
+              showSensors={showSensors}
               selectedTooth={tooth}
               focusTooth={tooth}
               autoRotate={false}

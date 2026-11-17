@@ -191,7 +191,7 @@ export default function Home() {
         </Section>
       </Screen>
 
-      <Loupe tooth={loupe} regions={regions} onClose={() => setLoupe(null)} />
+      <Loupe showSensors={showSensors} tooth={loupe} regions={regions} onClose={() => setLoupe(null)} />
     </View>
   );
 }
